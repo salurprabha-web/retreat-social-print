@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/.next-local
+**/dist
+**/.pgdata
+**/storage
+.git
+*.log
+apps/print-agent
+docs

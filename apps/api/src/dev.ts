@@ -7,6 +7,7 @@ import { createPool, migrate } from "./db";
 import { config } from "./config";
 import { requeueAllStale } from "./printService";
 import { startSyncTimer } from "./syncService";
+import { startRetentionTimer } from "./retention";
 
 const dir = process.env.DEV_PG_DIR ?? new URL("../.pgdata", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const pgPort = Number(process.env.DEV_PG_PORT ?? 54340);
@@ -27,5 +28,6 @@ const app = await buildApp(pool);
 setInterval(() => { requeueAllStale(pool, config.printStaleSeconds).catch(() => {}); }, 30_000).unref();
 await app.listen({ port: config.port, host: "127.0.0.1" });
 if (app.rspMode === "local" && app.rspSync) startSyncTimer(pool, app.rspSync, config.syncIntervalSeconds);
+startRetentionTimer(pool, 60);
 console.log(`DEV API on :${config.port} (${app.rspMode} mode, database in ${dir})`);
 process.on("SIGINT", async () => { await app.close(); await pool.end(); await pg.stop(); process.exit(0); });

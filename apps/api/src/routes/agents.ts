@@ -6,7 +6,7 @@ import type { Pool } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
 import { config } from "../config";
-import { requirePermission } from "../auth";
+import { requirePermission, tagAuth } from "../auth";
 import { getFile } from "../storage";
 import { PrintError, claimNext, notifyPrint, reportResult, transition } from "../printService";
 
@@ -27,13 +27,13 @@ declare module "fastify" { interface FastifyRequest { device?: Device } }
 
 export async function agentRoutes(app: FastifyInstance, pool: Pool) {
   /** Device credential: `Authorization: Bearer agt_...`. Only its hash is stored; a revoked or disabled device stops working at once. */
-  const requireDevice = async (req: FastifyRequest, reply: FastifyReply) => {
+  const requireDevice = tagAuth(async (req: FastifyRequest, reply: FastifyReply) => {
     const m = /^Bearer (agt_[A-Za-z0-9_-]{20,80})$/.exec(String(req.headers.authorization ?? ""));
     if (!m) return reply.code(401).send({ error: "unauthenticated" });
     const d = (await pool.query("SELECT id,event_id,name FROM devices WHERE token_hash=$1 AND kind='print_agent' AND enabled AND paired_at IS NOT NULL AND event_id IS NOT NULL", [sha(m[1])])).rows[0];
     if (!d) return reply.code(401).send({ error: "unauthenticated" });
     req.device = d;
-  };
+  }, { kind: "agent" });
   const limit = { config: { rateLimit: { max: () => config.agentRateLimitPerMin, timeWindow: "1 minute" } } };
 
   /* ------------------------- Agent -> server ------------------------- */

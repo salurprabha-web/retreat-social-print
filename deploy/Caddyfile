@@ -1,0 +1,32 @@
+# Reverse proxy: HTTPS with automatic certificates, one public address for everything.
+{$SITE_ADDRESS:localhost} {
+	# Guest photos can be up to 100 MB; nothing else needs more than a few KB.
+	request_body {
+		max_size 110MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# API: no compression (live event streams must not be buffered) and no read timeout on streams.
+	handle /api/* {
+		reverse_proxy api:4100 {
+			flush_interval -1
+		}
+	}
+
+	# What a scanned QR code opens: /q/<code> is answered by the API (counts the scan, redirects to the guest page).
+	handle /q/* {
+		rewrite * /api/v1/public{uri}
+		reverse_proxy api:4100
+	}
+
+	# Everything else is the web app.
+	handle {
+		encode zstd gzip
+		reverse_proxy web:3100
+	}
+}

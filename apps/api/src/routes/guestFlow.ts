@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash, randomInt } from "node:crypto";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import { z } from "zod";
 import { MAX_UPLOADS_PER_SESSION, SHARE_CHANNELS, photoAdjustSchema, resolveShare, validateGuestInput, type FrameLayer, type PageDefinition } from "@rsp/shared";
 import type { Pool } from "../db";
@@ -89,7 +89,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (buf.length > 12 && buf.subarray(4, 8).toString() === "ftyp" && /^(heic|heix|hevc|heim|heis|mif1|msf1|heif)/.test(buf.subarray(8, 12).toString()))
       return reply.code(415).send({ error: "heic_unsupported" });
 
-    let meta: sharp.Metadata;
+    let meta: Metadata;
     try {
       meta = await sharp(buf, { failOn: "error", limitInputPixels: MAX_PIXELS }).metadata();
       if (!meta.format || !["jpeg", "png", "webp"].includes(meta.format) || !meta.width || !meta.height) return reply.code(415).send({ error: "unsupported_image" });
@@ -129,7 +129,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     return reply.code(201).send({ uploadId: id, width, height, lowResolution: lowRes, bytes: buf.length });
   });
 
-  app.put("/api/v1/public/g/:token/photo/:uploadId/adjust", async (req, reply) => {
+  app.put("/api/v1/public/g/:token/photo/:uploadId/adjust", { config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } } }, async (req, reply) => {
     const g = await authGuest(req, reply); if (!g) return;
     const uploadId = (req.params as any).uploadId as string;
     if (!UUID.test(uploadId)) return reply.code(404).send({ error: "not_found" });

@@ -9,19 +9,28 @@ import type { Pool } from "./db";
  * Report queries. Every number here is a count of real rows; nothing is estimated. A "day" is a calendar day in the chosen time zone.
  * Metric definitions are written into the shared types so the screen, CSV and PDF agree.
  */
+/** A time-zone name is letters, digits and a few separators: anything else never reaches the database. */
+export const TZ_RE = /^[A-Za-z0-9_+-/]{1,64}$/;
+
 export class ReportError extends Error { constructor(public code: string, public status = 400) { super(code); } }
 
 export interface Bounds { range: ReportRange; fromTs: Date | null; toTs: Date | null }
 
 export async function resolveBounds(pool: Pool, q: { from?: unknown; to?: unknown; tz?: unknown }): Promise<Bounds> {
   const tz = typeof q.tz === "string" && q.tz ? q.tz : "UTC";
-  if (tz.length > 64 || !(await pool.query("SELECT 1 FROM pg_timezone_names WHERE name=$1", [tz])).rowCount) throw new ReportError("bad_timezone");
+  if (!TZ_RE.test(tz) || !(await pool.query("SELECT 1 FROM pg_timezone_names WHERE name=$1", [tz])).rowCount) throw new ReportError("bad_timezone");
   const from = q.from === undefined || q.from === "" ? null : q.from, to = q.to === undefined || q.to === "" ? null : q.to;
   if ((from !== null && !isDay(from)) || (to !== null && !isDay(to))) throw new ReportError("bad_date");
   if (from && to && from > to) throw new ReportError("bad_range");
   const r = (await pool.query(
     "SELECT ($1::date)::timestamp AT TIME ZONE $3 AS f, (($2::date) + 1)::timestamp AT TIME ZONE $3 AS t", [from, to, tz])).rows[0];
   return { range: { from: from as string | null, to: to as string | null, tz }, fromTs: r.f, toTs: r.t };
+}
+
+/** After retention has deleted an event's guest data, its reports come from the snapshot taken just before (figures for the whole event, any period filter is ignored). */
+async function frozen<T>(pool: Pool, eventId: string, key: string): Promise<T | null> {
+  const row = (await pool.query("SELECT retention_snapshot s FROM events WHERE id=$1 AND purged_at IS NOT NULL", [eventId])).rows[0];
+  return row?.s?.[key] ? ({ ...row.s[key], archived: true } as T) : null;
 }
 
 /** Rows whose timestamp column falls inside the range; $2/$3 are the bounds (null = open). */
@@ -31,6 +40,7 @@ const num = async (pool: Pool, sql: string, b: Bounds, eventId: string) => ((awa
 const SHARE = "('instagram','whatsapp','native')";
 
 export async function summary(pool: Pool, eventId: string, b: Bounds): Promise<SummaryReport> {
+  const fz = await frozen<SummaryReport>(pool, eventId, "summary"); if (fz) return fz;
   const [scans, sessions, uploads, selections, completed, shares, printJobs, outcomes, wall, qr] = await Promise.all([
     num(pool, `SELECT count(*)::int n FROM qr_scan_events WHERE event_id=$1 AND ${R("at")}`, b, eventId),
     num(pool, `SELECT count(*)::int n FROM guest_sessions WHERE event_id=$1 AND ${R("created_at")}`, b, eventId),
@@ -74,6 +84,7 @@ export async function summary(pool: Pool, eventId: string, b: Bounds): Promise<S
 }
 
 export async function daily(pool: Pool, eventId: string, b: Bounds): Promise<DailyReport> {
+  const fz = await frozen<DailyReport>(pool, eventId, "daily"); if (fz) return fz;
   let { from, to } = b.range;
   const today = (await pool.query("SELECT to_char((now() AT TIME ZONE $1)::date,'YYYY-MM-DD') d", [b.range.tz])).rows[0].d as string;
   if (!to) to = today;
@@ -111,6 +122,7 @@ export async function daily(pool: Pool, eventId: string, b: Bounds): Promise<Dai
 }
 
 export async function frames(pool: Pool, eventId: string, b: Bounds): Promise<FramesReport> {
+  const fz = await frozen<FramesReport>(pool, eventId, "frames"); if (fz) return fz;
   const rows = (await pool.query(
     `SELECT f.id, f.name, f.output_format, f.active, sp.name AS sponsor,
        (SELECT count(*)::int FROM frame_selections s WHERE s.frame_id=f.id AND s.event_id=f.event_id AND ${R("s.at")}) AS selections,
@@ -133,6 +145,7 @@ export async function frames(pool: Pool, eventId: string, b: Bounds): Promise<Fr
 export const OPERATOR_NOTE = "Only actions taken by a signed-in person are listed. Automatic printing, the print agent and deliveries from a local venue server are not attributed to anyone.";
 
 export async function operators(pool: Pool, eventId: string, b: Bounds): Promise<OperatorsReport> {
+  const fz = await frozen<OperatorsReport>(pool, eventId, "operators"); if (fz) return fz;
   const mod = (await pool.query(
     `SELECT user_id,
         COALESCE(sum(n) FILTER (WHERE action='photo_approved'),0)::int approved, COALESCE(sum(n) FILTER (WHERE action='photo_rejected'),0)::int rejected,
@@ -160,6 +173,7 @@ export async function operators(pool: Pool, eventId: string, b: Bounds): Promise
 }
 
 export async function printers(pool: Pool, eventId: string, b: Bounds): Promise<PrintersReport> {
+  const fz = await frozen<PrintersReport>(pool, eventId, "printers"); if (fz) return fz;
   const rows = (await pool.query(
     `SELECT p.id, p.name, p.paper_size, d.name AS computer, p.last_seen_at,
         count(j.id) FILTER (WHERE j.status='printed')::int printed, COALESCE(sum(j.copies) FILTER (WHERE j.status='printed'),0)::int copies,
@@ -179,6 +193,7 @@ export async function printers(pool: Pool, eventId: string, b: Bounds): Promise<
 
 export const SUBMISSION_LIMIT = 50000;
 export async function submissions(pool: Pool, eventId: string, b: Bounds): Promise<{ rows: SubmissionRow[]; truncated: boolean }> {
+  if ((await pool.query("SELECT 1 FROM events WHERE id=$1 AND purged_at IS NOT NULL", [eventId])).rowCount) return { rows: [], truncated: false };      // the pictures are gone
   const rows = (await pool.query(
     `SELECT s.guest_code, c.created_at, c.finalized_at, f.name AS frame, c.moderation,
         (SELECT count(*)::int FROM print_jobs j WHERE j.composition_id=c.id) AS jobs,
@@ -204,6 +219,8 @@ export async function eventsOverview(pool: Pool, eventIds: string[] | null, b: B
         (SELECT count(*)::int FROM share_events x WHERE x.event_id=e.id AND x.channel='download' AND ${R("x.created_at")}) downloads,
         (SELECT count(*)::int FROM qr_scan_events q WHERE q.event_id=e.id AND ${R("q.at")}) scans
        FROM events e WHERE e.status<>'archived' AND ($1::uuid[] IS NULL OR e.id = ANY($1)) ORDER BY e.created_at DESC`, [eventIds, b.fromTs, b.toTs])).rows;
+  const gone = new Map((await pool.query("SELECT id, retention_snapshot s FROM events WHERE purged_at IS NOT NULL AND id = ANY($1::uuid[])", [rows.map((x) => x.id)])).rows.map((x) => [x.id as string, x.s?.summary?.totals]));
+  for (const x of rows) { const t = gone.get(x.id); if (t) Object.assign(x, { sessions: t.sessions, completed: t.completed, printed: t.printed, failed: t.failedAttempts, shares: t.shareAttempts, downloads: t.downloads, scans: t.scans }); }
   return rows.map((r) => ({ eventId: r.id, name: r.name, status: r.status, sessions: r.sessions, completed: r.completed, printed: r.printed, failedAttempts: r.failed, shareAttempts: r.shares, downloads: r.downloads, scans: r.scans }));
 }
 

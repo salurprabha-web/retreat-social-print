@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type Sharp, type OverlayOptions } from "sharp";
 import { createCanvas } from "@napi-rs/canvas";
 import {
   coverLayout, fillTokens,
@@ -22,7 +22,7 @@ type Raw = { data: Buffer; width: number; height: number };
 const MAX_SOURCE_SIDE = 8000;                        // plenty for 300 DPI up to 6x8 even when zoomed; bounds memory
 const CLEAR = { r: 0, g: 0, b: 0, alpha: 0 };
 
-async function toRaw(s: sharp.Sharp): Promise<Raw> {
+async function toRaw(s: Sharp): Promise<Raw> {
   const { data, info } = await s.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   return { data, width: info.width, height: info.height };
 }
@@ -104,7 +104,7 @@ async function withOpacity(r: Raw, opacity: number): Promise<Raw> {
 
 export async function composeFrame(inp: ComposeInput): Promise<{ buffer: Buffer; width: number; height: number }> {
   const W = inp.widthPx, H = inp.heightPx;
-  const ops: sharp.OverlayOptions[] = [];
+  const ops: OverlayOptions[] = [];
   for (const l of inp.layers) {
     if (l.hidden) continue;
     const w = Math.round(l.w * W), h = Math.round(l.h * H);

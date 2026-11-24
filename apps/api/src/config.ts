@@ -1,7 +1,14 @@
 const isProd = process.env.NODE_ENV === "production";
-if (isProd && !process.env.SESSION_SECRET) throw new Error("SESSION_SECRET must be set in production (signs photo links)");
+if (isProd && !process.env.SESSION_SECRET) {
+  console.error("[config] ERROR: SESSION_SECRET is not set. It signs photo links; use at least 32 random characters (for example: openssl rand -hex 32).\nRefusing to start with an unsafe configuration.");
+  process.exit(1);
+}
+
+import { parseTrustProxy } from "./prodcheck";
 
 export const config = {
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
+  logLevel: process.env.LOG_LEVEL ?? (isProd ? "info" : "silent"),
   port: Number(process.env.PORT ?? 4100),
   databaseUrl: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5434/rsp",
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS ?? 12),
@@ -9,7 +16,8 @@ export const config = {
   guestRateLimitPerMin: Number(process.env.GUEST_RATE_LIMIT_PER_MIN ?? 240),
   composeRateLimitPerMin: Number(process.env.COMPOSE_RATE_LIMIT_PER_MIN ?? 120),
   globalRateLimitPerMin: Number(process.env.GLOBAL_RATE_LIMIT_PER_MIN ?? 1200),
-  cookieSecure: process.env.COOKIE_SECURE === "true",
+  // Secure cookies are the default in production (set COOKIE_SECURE=false only for plain-http development).
+  cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === "true" : isProd,
   storageDir: process.env.STORAGE_DIR ?? "./storage",
   publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, ""),
   urlSecret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",

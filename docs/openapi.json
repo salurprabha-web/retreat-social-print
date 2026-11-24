@@ -1,0 +1,6677 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Retreat Social Print API",
+    "version": "0.1.0",
+    "description": "Generated from the registered routes. Staff routes use the httpOnly session cookie plus the x-rsp-csrf header on every non-GET request; print agents and local venue servers use bearer credentials. Request and response bodies are validated inside the handlers and are not described in this document."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "rsp_session"
+      },
+      "agentToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "agt_... device credential"
+      },
+      "syncToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "sync_... credential"
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/agent/claim": {
+      "post": {
+        "operationId": "post_api_v1_agent_claim",
+        "summary": "Create or run: agent / claim",
+        "description": "Print agent credential",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "agentToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing, revoked or unknown credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/agent/heartbeat": {
+      "post": {
+        "operationId": "post_api_v1_agent_heartbeat",
+        "summary": "Create or run: agent / heartbeat",
+        "description": "Print agent credential",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "agentToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing, revoked or unknown credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/agent/jobs/{jobId}/image": {
+      "get": {
+        "operationId": "get_api_v1_agent_jobs_jobId_image",
+        "summary": "Read: agent / jobs / {jobId} / image",
+        "description": "Print agent credential",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "agentToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing, revoked or unknown credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/agent/jobs/{jobId}/progress": {
+      "post": {
+        "operationId": "post_api_v1_agent_jobs_jobId_progress",
+        "summary": "Create or run: agent / jobs / {jobId} / progress",
+        "description": "Print agent credential",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "agentToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing, revoked or unknown credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/agent/jobs/{jobId}/result": {
+      "post": {
+        "operationId": "post_api_v1_agent_jobs_jobId_result",
+        "summary": "Create or run: agent / jobs / {jobId} / result",
+        "description": "Print agent credential",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "agentToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing, revoked or unknown credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/agent/register": {
+      "post": {
+        "operationId": "post_api_v1_agent_register",
+        "summary": "Create or run: agent / register",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "agent"
+        ],
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "post_api_v1_auth_login",
+        "summary": "Create or run: auth / login",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "post_api_v1_auth_logout",
+        "summary": "Create or run: auth / logout",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "get_api_v1_auth_me",
+        "summary": "Read: auth / me",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "post_api_v1_auth_password",
+        "summary": "Create or run: auth / password",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/dashboard/activity": {
+      "get": {
+        "operationId": "get_api_v1_dashboard_activity",
+        "summary": "Read: dashboard / activity",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "dashboard"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/overview": {
+      "get": {
+        "operationId": "get_api_v1_dashboard_overview",
+        "summary": "Read: dashboard / overview",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "dashboard"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "operationId": "get_api_v1_events",
+        "summary": "Read: events",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "events"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_api_v1_events",
+        "summary": "Create or run: events",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "events"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/events/{eventId}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId",
+        "summary": "Delete: events / {eventId}",
+        "description": "Staff sign-in (super administrator): event:delete",
+        "tags": [
+          "events"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:delete"
+      },
+      "get": {
+        "operationId": "get_api_v1_events_eventId",
+        "summary": "Read: events / {eventId}",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "patch": {
+        "operationId": "patch_api_v1_events_eventId",
+        "summary": "Update: events / {eventId}",
+        "description": "Staff sign-in with the permission on this event: event:edit",
+        "tags": [
+          "events"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/agents": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_agents",
+        "summary": "Read: events / {eventId} / agents",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/agents"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_agents",
+        "summary": "Create or run: events / {eventId} / agents",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/agents"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/agents/{deviceId}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_agents_deviceId",
+        "summary": "Delete: events / {eventId} / agents / {deviceId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/agents"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      },
+      "patch": {
+        "operationId": "patch_api_v1_events_eventId_agents_deviceId",
+        "summary": "Update: events / {eventId} / agents / {deviceId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/agents"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/agents/{deviceId}/pairing": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_agents_deviceId_pairing",
+        "summary": "Create or run: events / {eventId} / agents / {deviceId} / pairing",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/agents"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_builder",
+        "summary": "Read: events / {eventId} / builder",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/apply-template": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_apply_template",
+        "summary": "Create or run: events / {eventId} / builder / apply-template",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/asset": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_asset",
+        "summary": "Create or run: events / {eventId} / builder / asset",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/asset/{name}": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_builder_asset_name",
+        "summary": "Read: events / {eventId} / builder / asset / {name}",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/draft": {
+      "put": {
+        "operationId": "put_api_v1_events_eventId_builder_draft",
+        "summary": "Replace: events / {eventId} / builder / draft",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/publish": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_publish",
+        "summary": "Create or run: events / {eventId} / builder / publish",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/restore": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_restore",
+        "summary": "Create or run: events / {eventId} / builder / restore",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/save-template": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_save_template",
+        "summary": "Create or run: events / {eventId} / builder / save-template",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/builder/unpublish": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_builder_unpublish",
+        "summary": "Create or run: events / {eventId} / builder / unpublish",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/builder"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_compositions",
+        "summary": "Read: events / {eventId} / compositions",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions-export": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_compositions_export",
+        "summary": "Read: events / {eventId} / compositions-export",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions-export"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions/{cid}": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_compositions_cid",
+        "summary": "Read: events / {eventId} / compositions / {cid}",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions/{cid}/image": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_compositions_cid_image",
+        "summary": "Read: events / {eventId} / compositions / {cid} / image",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions/{cid}/moderation": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_compositions_cid_moderation",
+        "summary": "Create or run: events / {eventId} / compositions / {cid} / moderation",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions/{cid}/thumb": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_compositions_cid_thumb",
+        "summary": "Read: events / {eventId} / compositions / {cid} / thumb",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/compositions/bulk": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_compositions_bulk",
+        "summary": "Create or run: events / {eventId} / compositions / bulk",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/compositions"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/duplicate": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_duplicate",
+        "summary": "Create or run: events / {eventId} / duplicate",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "events/duplicate"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/events/{eventId}/frame-assets": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_frame_assets",
+        "summary": "Create or run: events / {eventId} / frame-assets",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frame-assets"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/frame-assets/{name}": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_frame_assets_name",
+        "summary": "Read: events / {eventId} / frame-assets / {name}",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/frame-assets"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/frames": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_frames",
+        "summary": "Read: events / {eventId} / frames",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_frames",
+        "summary": "Create or run: events / {eventId} / frames",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/frames/{frameId}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_frames_frameId",
+        "summary": "Delete: events / {eventId} / frames / {frameId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "frameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      },
+      "get": {
+        "operationId": "get_api_v1_events_eventId_frames_frameId",
+        "summary": "Read: events / {eventId} / frames / {frameId}",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "frameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "put": {
+        "operationId": "put_api_v1_events_eventId_frames_frameId",
+        "summary": "Replace: events / {eventId} / frames / {frameId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "frameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/frames/{frameId}/copy-to/{targetId}": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_frames_frameId_copy_to_targetId",
+        "summary": "Create or run: events / {eventId} / frames / {frameId} / copy-to / {targetId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "frameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/frames/{frameId}/duplicate": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_frames_frameId_duplicate",
+        "summary": "Create or run: events / {eventId} / frames / {frameId} / duplicate",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/frames"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "frameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/guests/{code}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_guests_code",
+        "summary": "Delete: events / {eventId} / guests / {code}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/guests"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/logo/{kind}": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_logo_kind",
+        "summary": "Read: events / {eventId} / logo / {kind}",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/logo"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_logo_kind",
+        "summary": "Create or run: events / {eventId} / logo / {kind}",
+        "description": "Staff sign-in with the permission on this event: event:edit",
+        "tags": [
+          "events/logo"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_mosaic",
+        "summary": "Read: events / {eventId} / mosaic",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "put": {
+        "operationId": "put_api_v1_events_eventId_mosaic",
+        "summary": "Replace: events / {eventId} / mosaic",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/download": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_mosaic_download",
+        "summary": "Read: events / {eventId} / mosaic / download",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/image": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_mosaic_image",
+        "summary": "Read: events / {eventId} / mosaic / image",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/master": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_mosaic_master",
+        "summary": "Read: events / {eventId} / mosaic / master",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_mosaic_master",
+        "summary": "Create or run: events / {eventId} / mosaic / master",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/rebuild": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_mosaic_rebuild",
+        "summary": "Create or run: events / {eventId} / mosaic / rebuild",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/regenerate-token": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_mosaic_regenerate_token",
+        "summary": "Create or run: events / {eventId} / mosaic / regenerate-token",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/offline/package": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_offline_package",
+        "summary": "Read: events / {eventId} / offline / package",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/offline"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/print/history": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_print_history",
+        "summary": "Read: events / {eventId} / print / history",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/jobs": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_print_jobs",
+        "summary": "Read: events / {eventId} / print / jobs",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/jobs/{jobId}/action": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_print_jobs_jobId_action",
+        "summary": "Create or run: events / {eventId} / print / jobs / {jobId} / action",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/jobs/bulk": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_print_jobs_bulk",
+        "summary": "Create or run: events / {eventId} / print / jobs / bulk",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/mode": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_print_mode",
+        "summary": "Create or run: events / {eventId} / print / mode",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/queue": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_print_queue",
+        "summary": "Create or run: events / {eventId} / print / queue",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/print/stream": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_print_stream",
+        "summary": "Read: events / {eventId} / print / stream",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/print"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/printers/{printerId}": {
+      "patch": {
+        "operationId": "patch_api_v1_events_eventId_printers_printerId",
+        "summary": "Update: events / {eventId} / printers / {printerId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/printers"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "printerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/qr": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_qr",
+        "summary": "Read: events / {eventId} / qr",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_qr",
+        "summary": "Create or run: events / {eventId} / qr",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/qr/{qrId}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_qr_qrId",
+        "summary": "Delete: events / {eventId} / qr / {qrId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      },
+      "patch": {
+        "operationId": "patch_api_v1_events_eventId_qr_qrId",
+        "summary": "Update: events / {eventId} / qr / {qrId}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/qr/{qrId}/image": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_qr_qrId_image",
+        "summary": "Read: events / {eventId} / qr / {qrId} / image",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/qr/{qrId}/poster": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_qr_qrId_poster",
+        "summary": "Read: events / {eventId} / qr / {qrId} / poster",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      }
+    },
+    "/api/v1/events/{eventId}/qr/{qrId}/regenerate": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_qr_qrId_regenerate",
+        "summary": "Create or run: events / {eventId} / qr / {qrId} / regenerate",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/qr"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "qrId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/{name}/csv": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_name_csv",
+        "summary": "Read: events / {eventId} / reports / {name} / csv",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/daily": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_daily",
+        "summary": "Read: events / {eventId} / reports / daily",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/frames": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_frames",
+        "summary": "Read: events / {eventId} / reports / frames",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/operators": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_operators",
+        "summary": "Read: events / {eventId} / reports / operators",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/pdf": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_pdf",
+        "summary": "Read: events / {eventId} / reports / pdf",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/printers": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_printers",
+        "summary": "Read: events / {eventId} / reports / printers",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/reports/summary": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_reports_summary",
+        "summary": "Read: events / {eventId} / reports / summary",
+        "description": "Staff sign-in with the permission on this event: report:view",
+        "tags": [
+          "events/reports"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "report:view"
+      }
+    },
+    "/api/v1/events/{eventId}/retention": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_retention",
+        "summary": "Read: events / {eventId} / retention",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/retention"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "put": {
+        "operationId": "put_api_v1_events_eventId_retention",
+        "summary": "Replace: events / {eventId} / retention",
+        "description": "Staff sign-in with the permission on this event: event:edit",
+        "tags": [
+          "events/retention"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/retention/purge": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_retention_purge",
+        "summary": "Create or run: events / {eventId} / retention / purge",
+        "description": "Staff sign-in with the permission on this event: event:delete",
+        "tags": [
+          "events/retention"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:delete"
+      }
+    },
+    "/api/v1/events/{eventId}/sponsors": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_sponsors",
+        "summary": "Read: events / {eventId} / sponsors",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_sponsors",
+        "summary": "Create or run: events / {eventId} / sponsors",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/sponsors/{id}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_sponsors_id",
+        "summary": "Delete: events / {eventId} / sponsors / {id}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      },
+      "put": {
+        "operationId": "put_api_v1_events_eventId_sponsors_id",
+        "summary": "Replace: events / {eventId} / sponsors / {id}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/sponsors/{id}/logo": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_sponsors_id_logo",
+        "summary": "Delete: events / {eventId} / sponsors / {id} / logo",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      },
+      "get": {
+        "operationId": "get_api_v1_events_eventId_sponsors_id_logo",
+        "summary": "Read: events / {eventId} / sponsors / {id} / logo",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_sponsors_id_logo",
+        "summary": "Create or run: events / {eventId} / sponsors / {id} / logo",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/sponsors/reorder": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_sponsors_reorder",
+        "summary": "Create or run: events / {eventId} / sponsors / reorder",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sponsors"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/status": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_status",
+        "summary": "Create or run: events / {eventId} / status",
+        "description": "Staff sign-in with the permission on this event: event:edit",
+        "tags": [
+          "events/status"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/sync-credentials": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_sync_credentials",
+        "summary": "Read: events / {eventId} / sync-credentials",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/sync-credentials"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "post": {
+        "operationId": "post_api_v1_events_eventId_sync_credentials",
+        "summary": "Create or run: events / {eventId} / sync-credentials",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sync-credentials"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/sync-credentials/{id}": {
+      "delete": {
+        "operationId": "delete_api_v1_events_eventId_sync_credentials_id",
+        "summary": "Delete: events / {eventId} / sync-credentials / {id}",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/sync-credentials"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/uploads/{uid}/thumb": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_uploads_uid_thumb",
+        "summary": "Read: events / {eventId} / uploads / {uid} / thumb",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/uploads"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/uploads/{uploadId}/original": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_uploads_uploadId_original",
+        "summary": "Read: events / {eventId} / uploads / {uploadId} / original",
+        "description": "Staff sign-in with the permission on this event: print:operate",
+        "tags": [
+          "events/uploads"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "print:operate"
+      }
+    },
+    "/api/v1/events/{eventId}/wall": {
+      "get": {
+        "operationId": "get_api_v1_events_eventId_wall",
+        "summary": "Read: events / {eventId} / wall",
+        "description": "Staff sign-in with the permission on this event: event:view",
+        "tags": [
+          "events/wall"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:view"
+      },
+      "put": {
+        "operationId": "put_api_v1_events_eventId_wall",
+        "summary": "Replace: events / {eventId} / wall",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/wall"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/wall/regenerate-token": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_wall_regenerate_token",
+        "summary": "Create or run: events / {eventId} / wall / regenerate-token",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/wall"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/frame-formats": {
+      "get": {
+        "operationId": "get_api_v1_frame_formats",
+        "summary": "Read: frame-formats",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "frame-formats"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "get_api_v1_health",
+        "summary": "Read: health",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "health"
+        ],
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/offline/import": {
+      "post": {
+        "operationId": "post_api_v1_offline_import",
+        "summary": "Create or run: offline / import",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "offline"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "operationId": "get_api_v1_openapi_json",
+        "summary": "Read: openapi.json",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "openapi.json"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/public/c/{cid}": {
+      "get": {
+        "operationId": "get_api_v1_public_c_cid",
+        "summary": "Read: public / c / {cid}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/c"
+        ],
+        "parameters": [
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token",
+        "summary": "Read: public / g / {token}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/asset/{name}": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_asset_name",
+        "summary": "Read: public / g / {token} / asset / {name}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/compose": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_compose",
+        "summary": "Create or run: public / g / {token} / compose",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/composition/{cid}/finalize": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_composition_cid_finalize",
+        "summary": "Create or run: public / g / {token} / composition / {cid} / finalize",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/composition/{cid}/share": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_composition_cid_share",
+        "summary": "Create or run: public / g / {token} / composition / {cid} / share",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/composition/{cid}/url": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_composition_cid_url",
+        "summary": "Read: public / g / {token} / composition / {cid} / url",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/frame-assets/{name}": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_frame_assets_name",
+        "summary": "Read: public / g / {token} / frame-assets / {name}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/frames": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_frames",
+        "summary": "Read: public / g / {token} / frames",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/logo/{kind}": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_logo_kind",
+        "summary": "Read: public / g / {token} / logo / {kind}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/g/{token}/photo": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_photo",
+        "summary": "Create or run: public / g / {token} / photo",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/photo/{uploadId}/adjust": {
+      "put": {
+        "operationId": "put_api_v1_public_g_token_photo_uploadId_adjust",
+        "summary": "Replace: public / g / {token} / photo / {uploadId} / adjust",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/session": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_session",
+        "summary": "Create or run: public / g / {token} / session",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/sponsor/{id}/logo": {
+      "get": {
+        "operationId": "get_api_v1_public_g_token_sponsor_id_logo",
+        "summary": "Read: public / g / {token} / sponsor / {id} / logo",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/m/{token}": {
+      "get": {
+        "operationId": "get_api_v1_public_m_token",
+        "summary": "Read: public / m / {token}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/m"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/m/{token}/image": {
+      "get": {
+        "operationId": "get_api_v1_public_m_token_image",
+        "summary": "Read: public / m / {token} / image",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/m"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/m/{token}/stream": {
+      "get": {
+        "operationId": "get_api_v1_public_m_token_stream",
+        "summary": "Read: public / m / {token} / stream",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/m"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/q/{code}": {
+      "get": {
+        "operationId": "get_api_v1_public_q_code",
+        "summary": "Read: public / q / {code}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/q"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/q/{code}/display": {
+      "get": {
+        "operationId": "get_api_v1_public_q_code_display",
+        "summary": "Read: public / q / {code} / display",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/q"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/q/{code}/logo": {
+      "get": {
+        "operationId": "get_api_v1_public_q_code_logo",
+        "summary": "Read: public / q / {code} / logo",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/q"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token",
+        "summary": "Read: public / w / {token}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}/img/{cid}": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token_img_cid",
+        "summary": "Read: public / w / {token} / img / {cid}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}/logo/{kind}": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token_logo_kind",
+        "summary": "Read: public / w / {token} / logo / {kind}",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}/photos": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token_photos",
+        "summary": "Read: public / w / {token} / photos",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}/shown": {
+      "post": {
+        "operationId": "post_api_v1_public_w_token_shown",
+        "summary": "Create or run: public / w / {token} / shown",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/w/{token}/sponsor/{id}/logo": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token_sponsor_id_logo",
+        "summary": "Read: public / w / {token} / sponsor / {id} / logo",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/public/w/{token}/stream": {
+      "get": {
+        "operationId": "get_api_v1_public_w_token_stream",
+        "summary": "Read: public / w / {token} / stream",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/w"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/reports/events": {
+      "get": {
+        "operationId": "get_api_v1_reports_events",
+        "summary": "Read: reports / events",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "reports"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/sync/file": {
+      "put": {
+        "operationId": "put_api_v1_sync_file",
+        "summary": "Replace: sync / file",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/files/check": {
+      "post": {
+        "operationId": "post_api_v1_sync_files_check",
+        "summary": "Create or run: sync / files / check",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/ping": {
+      "get": {
+        "operationId": "get_api_v1_sync_ping",
+        "summary": "Read: sync / ping",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/push": {
+      "post": {
+        "operationId": "post_api_v1_sync_push",
+        "summary": "Create or run: sync / push",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/run": {
+      "post": {
+        "operationId": "post_api_v1_sync_run",
+        "summary": "Create or run: sync / run",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/sync/status": {
+      "get": {
+        "operationId": "get_api_v1_sync_status",
+        "summary": "Read: sync / status",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "operationId": "get_api_v1_templates",
+        "summary": "Read: templates",
+        "description": "Any signed-in staff user (results are limited to what the user may see)",
+        "tags": [
+          "templates"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "get_api_v1_users",
+        "summary": "Read: users",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "users"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      },
+      "post": {
+        "operationId": "post_api_v1_users",
+        "summary": "Create or run: users",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/users/{id}": {
+      "patch": {
+        "operationId": "patch_api_v1_users_id",
+        "summary": "Update: users / {id}",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/users/{id}/event-roles": {
+      "put": {
+        "operationId": "put_api_v1_users_id_event_roles",
+        "summary": "Replace: users / {id} / event-roles",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    },
+    "/api/v1/users/{id}/password": {
+      "post": {
+        "operationId": "post_api_v1_users_id_password",
+        "summary": "Create or run: users / {id} / password",
+        "description": "Staff sign-in (super administrator): event:create",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "event:create"
+      }
+    }
+  }
+}

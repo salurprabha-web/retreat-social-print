@@ -5,7 +5,7 @@ import { SYNC_MAX_FILE_BYTES, SYNC_TABLE, SYNC_TABLES, parseRowKey, syncFileKeyO
 import type { Pool, Tx } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
-import { requirePermission, requireUser } from "../auth";
+import { requirePermission, requireUser, tagAuth } from "../auth";
 import { config } from "../config";
 import { deleteFile, statFile, writeStable } from "../storage";
 import { notifyWall } from "../wallBus";
@@ -96,14 +96,14 @@ export async function syncRoutes(app: FastifyInstance, pool: Pool) {
   const cloudOnly = async (_req: FastifyRequest, reply: FastifyReply) => { if (app.rspMode !== "cloud") return reply.code(404).send({ error: "not_cloud_server" }); };
 
   /** Bearer sync credential: only a hash is stored, and it can be revoked at any time. */
-  const auth = async (req: FastifyRequest, reply: FastifyReply) => {
+  const auth = tagAuth(async (req: FastifyRequest, reply: FastifyReply) => {
     if (app.rspMode !== "cloud") return reply.code(404).send({ error: "not_cloud_server" });
     const m = /^Bearer (sync_[a-f0-9]{48})$/.exec(String(req.headers.authorization ?? ""));
     const c = m ? (await pool.query("SELECT id,event_id FROM sync_credentials WHERE token_hash=$1 AND revoked_at IS NULL", [hashToken(m[1])])).rows[0] : null;
     if (!c) return reply.code(401).send({ error: "invalid_credential" });
     await pool.query("UPDATE sync_credentials SET last_seen_at=now(), last_ip=$2 WHERE id=$1", [c.id, req.ip]);
     req.sync = { id: c.id, eventId: c.event_id };
-  };
+  }, { kind: "sync" });
 
   // ----- Cloud: staff manage credentials and download the event package -----
   app.post("/api/v1/events/:eventId/sync-credentials", { preHandler: [edit, cloudOnly] }, async (req, reply) => {

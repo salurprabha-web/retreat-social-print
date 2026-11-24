@@ -10,7 +10,12 @@
     "migrate": "tsx src/migrate-cli.ts",
     "seed:admin": "tsx src/seed-admin.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "build": "node scripts/build.mjs",
+    "start:prod": "node dist/index.js",
+    "migrate:prod": "node dist/migrate-cli.js",
+    "seed:admin:prod": "node dist/seed-admin.js",
+    "openapi": "node dist/openapi-cli.js ../../docs/openapi.json"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.1",
@@ -32,7 +37,7 @@
     "pdfkit": "^0.21.0",
     "pg": "^8.13.1",
     "qrcode": "^1.5.4",
-    "sharp": "^0.34.0",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -42,6 +47,7 @@
     "@types/pg": "^8.11.10",
     "@types/qrcode": "^1.5.5",
     "embedded-postgres": "^17.2.0-beta.15",
+    "esbuild": "0.25",
     "fflate": "^0.8.3",
     "jsqr": "^1.4.0",
     "tsx": "^4.19.2",

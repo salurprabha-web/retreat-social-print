@@ -89,3 +89,11 @@ See `docs/OFFLINE.md` for setup. In short:
 - **Days and zones**: a range is a pair of calendar days interpreted in a validated IANA zone (`pg_timezone_names`); bounds are converted to timestamps once and reused. Daily series are grouped in SQL by `(ts AT TIME ZONE tz)::date`.
 - **Exports**: `toCsv` (RFC 4180, BOM, formula neutralisation) and `reportPdf.ts` (pdfkit, built-in fonts, text sanitised to Latin-1). Both are audited. Permission: `report:view`.
 - **Web**: `components/charts.tsx` (line chart with hover crosshair and tooltip, legend toggles, direct end labels, table view; funnel) using the validated reference palette's first four slots, light and dark. Details of every metric: `docs/REPORTS.md`.
+
+## Security, retention and deployment (Phase 17)
+- **Route registry**: `buildApp` records every route with how it is protected (`AuthMeta`: permission (event-scoped or global), signed-in user, print agent, sync credential, or public). `docs/openapi.json` is generated from it and the security tests are derived from it, so a new route is covered, or the tests fail.
+- **One guard for identifiers**: uuid-shaped address parameters are validated once (`UUID_PARAMS` hook); anything malformed is a 404 and never reaches SQL.
+- **Retention** (`retention.ts`): per-event period counted from archive; hourly timer in the API; purge freezes the report snapshot, deletes guest rows and files, keeps statistics; legal hold; local venue servers wait until their data is delivered.
+- **Users** (`routes/users.ts`): super-administrator only; row locks keep at least one active super administrator under concurrent changes.
+- **Production** (`prodcheck.ts`, `config.ts`, `index.ts`): startup refuses unsafe settings, secure cookies by default, `TRUST_PROXY`, redacted structured logs, graceful shutdown. The API is bundled with esbuild (native modules stay external).
+- **Deployment** (`deploy/`): Docker images for api and web, Caddy as the only published service (one origin: `/api` and `/q` to the API, the rest to the web app; no buffering of live streams), read-only containers, backup and restore scripts. See `docs/DEPLOYMENT.md`.

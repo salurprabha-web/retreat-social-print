@@ -1,8 +1,16 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { roleHas, type Permission, type Role } from "@rsp/shared";
 import type { Pool } from "./db";
+
+/** How a route is protected. Attached to the preHandler so the route registry can read it: documentation and tests are derived from the code. */
+export type AuthMeta =
+  | { kind: "user" }
+  | { kind: "permission"; permission: Permission; eventScoped: boolean }
+  | { kind: "agent" }
+  | { kind: "sync" };
+export const tagAuth = <T extends object>(fn: T, meta: AuthMeta): T => Object.assign(fn, { rspAuth: meta });
 
 export const COOKIE_NAME = "rsp_session";
 export const CSRF_HEADER = "x-rsp-csrf";
@@ -72,28 +80,34 @@ export function can(u: AuthUser, perm: Permission, eventId?: string): boolean {
  * is checked. Mutations must carry the per-session CSRF header.
  */
 export function requirePermission(pool: Pool, perm: Permission, opts: { eventParam?: string } = {}) {
-  return async (req: FastifyRequest, reply: FastifyReply) => {
+  return tagAuth(async (req: FastifyRequest, reply: FastifyReply) => {
     const token = req.cookies[COOKIE_NAME];
     const user = token ? await loadUser(pool, token) : null;
     if (!user) return reply.code(401).send({ error: "unauthenticated" });
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && req.headers[CSRF_HEADER] !== user.csrf) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !csrfOk(req.headers[CSRF_HEADER], user.csrf)) {
       return reply.code(403).send({ error: "csrf" });
     }
     const eventId = opts.eventParam ? (req.params as Record<string, string>)[opts.eventParam] : undefined;
     if (!can(user, perm, eventId)) return reply.code(403).send({ error: "forbidden" });
     req.user = user;
-  };
+  }, { kind: "permission", permission: perm, eventScoped: !!opts.eventParam });
+}
+
+/** Constant-time comparison of the per-session CSRF token. */
+function csrfOk(sent: unknown, expected: string): boolean {
+  if (typeof sent !== "string" || sent.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(sent), Buffer.from(expected));
 }
 
 /** Any signed-in user (used for /me and the dashboard, which scope their own data). */
 export function requireUser(pool: Pool) {
-  return async (req: FastifyRequest, reply: FastifyReply) => {
+  return tagAuth(async (req: FastifyRequest, reply: FastifyReply) => {
     const token = req.cookies[COOKIE_NAME];
     const user = token ? await loadUser(pool, token) : null;
     if (!user) return reply.code(401).send({ error: "unauthenticated" });
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && req.headers[CSRF_HEADER] !== user.csrf) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !csrfOk(req.headers[CSRF_HEADER], user.csrf)) {
       return reply.code(403).send({ error: "csrf" });
     }
     req.user = user;
-  };
+  }, { kind: "user" });
 }

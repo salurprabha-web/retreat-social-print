@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import { createCanvas } from "@napi-rs/canvas";
 import { wrapLines } from "./compose";
 import { fontFamilies, registerFonts } from "./fonts";
@@ -26,7 +26,7 @@ export async function renderPoster(o: { eventName: string; hashtag: string | nul
   x.fillStyle = "#888888"; x.font = `44px ${fontFamilies("sans", false, false)}`;
   x.fillText("RETREAT SOCIAL PRINT  ·  CAPTURE. CUSTOMIZE. SHARE. PRINT.", W / 2, H - 140);
 
-  const layers: sharp.OverlayOptions[] = [{ input: o.qr, left: Math.round((W - o.qrSize) / 2), top: qrTop }];
+  const layers: OverlayOptions[] = [{ input: o.qr, left: Math.round((W - o.qrSize) / 2), top: qrTop }];
   if (o.logo) {
     const l = await sharp(o.logo, { density: 300 }).resize(900, 340, { fit: "inside", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer({ resolveWithObject: true });
     layers.push({ input: l.data, left: Math.round((W - l.info.width) / 2), top: 200 + Math.round((340 - l.info.height) / 2) });

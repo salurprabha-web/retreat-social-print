@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { NO_ADJUST, newLayer, type EventInfo, type FrameLayer, type PhotoAdjust } from "@rsp/shared";
 import { composeFrame, type SlotImage } from "../src/compose";
 
@@ -13,7 +13,7 @@ async function sampler(buf: Buffer) {
   return (x: number, y: number): RGB => { const o = (Math.round(y) * info.width + Math.round(x)) * info.channels; return [data[o], data[o + 1], data[o + 2]]; };
 }
 const RED: RGB = [255, 0, 0], GREEN: RGB = [0, 255, 0], BLUE: RGB = [0, 0, 255], WHITE: RGB = [255, 255, 255];
-const jpg = (s: sharp.Sharp) => s.jpeg({ quality: 100, chromaSubsampling: "4:4:4" }).toBuffer();
+const jpg = (s: Sharp) => s.jpeg({ quality: 100, chromaSubsampling: "4:4:4" }).toBuffer();
 const solid = (w: number, h: number, c: string) => ({ create: { width: w, height: h, channels: 3 as const, background: c } });
 
 /** left half red | right half green */

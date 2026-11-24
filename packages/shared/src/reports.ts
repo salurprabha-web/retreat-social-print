@@ -28,16 +28,16 @@ export interface Totals {
   wallPictures: number;          // different pictures shown on the wall (all time)
 }
 export interface FunnelStep { key: string; label: string; count: number; pct: number }
-export interface SummaryReport { range: ReportRange; totals: Totals; funnel: FunnelStep[]; qr: { code: string; label: string | null; scans: number }[]; generatedAt: string }
+export interface SummaryReport { archived?: boolean; range: ReportRange; totals: Totals; funnel: FunnelStep[]; qr: { code: string; label: string | null; scans: number }[]; generatedAt: string }
 
 export interface DailyRow {
   day: string; scans: number; sessions: number; uploads: number; frameSelections: number; completed: number;
   shareAttempts: number; instagramAttempts: number; downloads: number; printJobs: number; reprints: number; printed: number; failedAttempts: number;
 }
-export interface DailyReport { range: ReportRange; rows: DailyRow[]; generatedAt: string }
+export interface DailyReport { archived?: boolean; range: ReportRange; rows: DailyRow[]; generatedAt: string }
 
 export interface FrameRow { frameId: string; name: string; format: string; active: boolean; sponsor: string | null; selections: number; completed: number; completedPct: number; printed: number; shareAttempts: number; downloads: number; sharedOrDownloadedPct: number }
-export interface FramesReport { range: ReportRange; rows: FrameRow[]; generatedAt: string }
+export interface FramesReport { archived?: boolean; range: ReportRange; rows: FrameRow[]; generatedAt: string }
 
 export interface OperatorRow {
   userId: string | null; name: string; email: string | null;
@@ -45,10 +45,10 @@ export interface OperatorRow {
   printApproved: number; held: number; cancelled: number; retried: number; reprintsRequested: number;   // print queue
   total: number; firstAt: string | null; lastAt: string | null;
 }
-export interface OperatorsReport { range: ReportRange; rows: OperatorRow[]; note: string; generatedAt: string }
+export interface OperatorsReport { archived?: boolean; range: ReportRange; rows: OperatorRow[]; note: string; generatedAt: string }
 
 export interface PrinterRow { printerId: string | null; name: string; computer: string | null; paper: string | null; printed: number; copiesPrinted: number; failed: number; successPct: number | null; avgSeconds: number | null; lastSeenAt: string | null }
-export interface PrintersReport { range: ReportRange; rows: PrinterRow[]; generatedAt: string }
+export interface PrintersReport { archived?: boolean; range: ReportRange; rows: PrinterRow[]; generatedAt: string }
 
 export interface SubmissionRow { guestCode: string | null; createdAt: string; finalizedAt: string | null; frame: string; moderation: string; printJobs: number; printed: number; shareAttempts: number; downloads: number; wallShown: number }
 

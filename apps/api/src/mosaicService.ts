@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import { createHash } from "node:crypto";
 import {
   assignTiles, cellRect, decodeColors, encodeColors, gridFor, mosaicOutputSize, resolveMosaicSettings,
@@ -132,7 +132,7 @@ async function draw(opts: {
   if (opts.s.empty === "dim") base = base.modulate({ brightness: 0.45, saturation: 0.85 });
   const baseRaw = await base.raw().toBuffer();                                   // dimming is finished before anything is drawn on top
 
-  const ops: sharp.OverlayOptions[] = [];
+  const ops: OverlayOptions[] = [];
   for (const t of opts.tiles) {
     const r = cellRect(t.cell, opts.cols, opts.rows, W, H);
     ops.push({ input: await sharp(t.thumb).resize(r.w, r.h, { fit: "cover" }).toBuffer(), left: r.x, top: r.y });

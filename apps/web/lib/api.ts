@@ -10,7 +10,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     body: init.body ? JSON.stringify(init.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(data.error ?? `HTTP ${res.status}`), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(data.error ?? `HTTP ${res.status}`), { status: res.status, reason: data.reason as string | undefined });
   return data as T;
 }
 

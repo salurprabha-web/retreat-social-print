@@ -69,6 +69,7 @@ function Body() {
       </div>
       {err && <div className="err" role="alert">{err}</div>}
 
+      {data?.s.archived && <div className="card" style={{ marginTop: 14, borderColor: "var(--brand)" }}><b>Archived figures</b><div className="muted">This event's guest data was deleted under the retention policy. These are the totals frozen at that moment for the whole event; the period and time zone filters do not apply, and the list of pictures is empty.</div></div>}
       {data && t && (
         <>
           <div className="inl" style={{ margin: "14px 0 6px", gap: 8 }}>

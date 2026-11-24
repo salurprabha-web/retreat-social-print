@@ -10,5 +10,5 @@
     "seed:admin": "pnpm --filter @rsp/api seed:admin",
     "dev:api": "pnpm --filter @rsp/api dev"
   },
-  "pnpm": { "onlyBuiltDependencies": ["embedded-postgres", "esbuild", "@node-rs/argon2", "sharp"] }
+  "pnpm": { "onlyBuiltDependencies": ["embedded-postgres", "esbuild", "@node-rs/argon2", "sharp"], "overrides": { "postcss": ">=8.5.23" } }
 }

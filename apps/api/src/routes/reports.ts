@@ -7,7 +7,7 @@ import {
 import type { Pool } from "../db";
 import { audit } from "../audit";
 import { can, requirePermission, requireUser } from "../auth";
-import { ReportError, activity, daily, eventsOverview, frames, operators, printers, resolveBounds, submissions, summary, type Bounds } from "../reports";
+import { ReportError, TZ_RE, activity, daily, eventsOverview, frames, operators, printers, resolveBounds, submissions, summary, type Bounds } from "../reports";
 import { eventReportPdf } from "../reportPdf";
 
 export async function reportRoutes(app: FastifyInstance, pool: Pool) {
@@ -69,7 +69,7 @@ export async function reportRoutes(app: FastifyInstance, pool: Pool) {
 
   app.get("/api/v1/dashboard/activity", { preHandler: requireUser(pool) }, async (req) => {
     const q = z.object({ days: z.coerce.number().int().min(1).max(90).default(14), tz: z.string().max(64).default("UTC") }).parse(req.query);
-    if (!(await pool.query("SELECT 1 FROM pg_timezone_names WHERE name=$1", [q.tz])).rowCount) throw new ReportError("bad_timezone");
+    if (!TZ_RE.test(q.tz) || !(await pool.query("SELECT 1 FROM pg_timezone_names WHERE name=$1", [q.tz])).rowCount) throw new ReportError("bad_timezone");
     const ids = visibleEvents(req.user!, "event:view");
     return { days: ids && !ids.length ? [] : await activity(pool, ids, q.days, q.tz) };
   });

@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyServerOptions } from "fastify";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
 import { ZodError } from "zod";
@@ -7,7 +7,7 @@ import { config } from "./config";
 import type { Pool } from "./db";
 import { audit } from "./audit";
 import {
-  COOKIE_NAME, LOCK_MINUTES, MAX_FAILED_LOGINS, createSession, destroySession, loadUser, requireUser, verifyPassword,
+  COOKIE_NAME, LOCK_MINUTES, MAX_FAILED_LOGINS, createSession, destroySession, loadUser, requirePermission, requireUser, verifyPassword,
 } from "./auth";
 import { dashboardRoutes } from "./routes/dashboard";
 import { eventRoutes } from "./routes/events";
@@ -23,19 +23,43 @@ import { sponsorRoutes } from "./routes/sponsors";
 import { mosaicRoutes } from "./routes/mosaic";
 import { syncRoutes } from "./routes/sync";
 import { reportRoutes } from "./routes/reports";
+import { userRoutes } from "./routes/users";
+import { retentionRoutes } from "./routes/retention";
 import { ReportError } from "./reports";
 import { storageContext } from "./storage";
 import type { SyncConfig } from "./syncService";
+import { buildOpenApi, type RouteInfo } from "./openapi";
 import { PrintError } from "./printService";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_PARAMS = ["eventId", "cid", "id", "qrId", "frameId", "jobId", "deviceId", "uploadId", "uid", "targetId", "printerId"] as const;
 export type RspMode = "cloud" | "local";
-declare module "fastify" { interface FastifyInstance { rspMode: RspMode; rspStorageDir: string | null; rspSync: SyncConfig | null } }
+declare module "fastify" { interface FastifyInstance { rspMode: RspMode; rspStorageDir: string | null; rspSync: SyncConfig | null; rspRoutes: RouteInfo[] } }
 
 /** `storageDir` and `mode` let one process host several servers (offline-mode tests); normally both come from the environment. */
-export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: RspMode; sync?: SyncConfig | null } = {}) {
-  const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
+export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: RspMode; sync?: SyncConfig | null; logger?: boolean } = {}) {
+  // Request logs never carry credentials: cookies, tokens and guest session headers are redacted, and addresses that ARE credentials
+  // (guest, wall and mosaic links, signed photo links) are masked, query strings dropped.
+  const mask = (u: string) => u.split("?")[0].replace(/\/(g|w|m)\/[0-9a-f]{24}/g, "/$1/:token").replace(/\/public\/c\/[0-9a-f-]{36}/g, "/public/c/:id").replace(/\/q\/[A-Za-z0-9]{4,}/g, "/q/:code");
+  const logger: FastifyServerOptions["logger"] = opts.logger
+    ? { level: config.logLevel === "silent" ? "info" : config.logLevel, redact: ["req.headers.cookie", "req.headers.authorization", 'req.headers["x-guest-session"]', 'req.headers["x-rsp-csrf"]', 'req.headers["x-sha256"]'],
+        serializers: { req: (r: any) => ({ method: r.method, url: mask(r.url), remoteAddress: r.ip ?? r.socket?.remoteAddress }) } }
+    : false;
+  const app = Fastify({ logger, trustProxy: config.trustProxy as FastifyServerOptions["trustProxy"], forceCloseConnections: true, bodyLimit: 256 * 1024 });
   app.decorate("rspMode", opts.mode ?? config.mode);
   app.decorate("rspStorageDir", opts.storageDir ?? null);
+  // Route registry: every route with how it is protected. Feeds the generated API document and the automated security tests.
+  app.decorate("rspRoutes", [] as RouteInfo[]);
+  // A malformed identifier in the address is simply "not found": it must never reach the database (where it would become a 500).
+  app.addHook("onRequest", async (req, reply) => {
+    const p = req.params as Record<string, string> | undefined;
+    if (p) for (const n of UUID_PARAMS) if (p[n] !== undefined && !UUID_RE.test(p[n])) return reply.code(404).send({ error: "not_found" });
+  });
+  app.addHook("onRoute", (r) => {
+    const pre = [r.preHandler, r.onRequest].flat().filter(Boolean) as unknown as { rspAuth?: RouteInfo["auth"] }[];
+    const auth = pre.map((f) => f.rspAuth).find(Boolean) ?? null;
+    for (const m of ([] as string[]).concat(r.method as any)) if (m !== "HEAD" && m !== "OPTIONS") app.rspRoutes.push({ method: m, url: r.url, auth, rateLimited: !!(r.config as any)?.rateLimit });
+  });
   app.decorate("rspSync", opts.sync !== undefined ? opts.sync : (config.cloudUrl && config.syncTokens.length ? { cloudUrl: config.cloudUrl, tokens: config.syncTokens } : null));
   if (opts.storageDir) app.addHook("onRequest", (_req, _reply, done) => { storageContext.run({ root: opts.storageDir! }, done); });
   await app.register(cookie);
@@ -53,6 +77,8 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
     if (err instanceof ReportError) return reply.code(err.status).send({ error: err.code });
     if (err instanceof PrintError) return reply.code(err.statusCode).send({ error: err.code, ...err.extra });   // expected refusals from the print queue
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ error: err.message });
+    // A stored file that is not on the disk (lost volume, wrong STORAGE_DIR) is reported as exactly that, and logged, not as a mystery 500.
+    if (err.code === "ENOENT") { app.log.warn({ path: String(err.path ?? "").split(/[\\/]events[\\/]/)[1] ?? "?" }, "stored file missing"); return reply.code(404).send({ error: "file_missing" }); }
     console.error(err);
     return reply.code(500).send({ error: "internal" });
   });
@@ -80,7 +106,7 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
         await audit(pool, u?.id, "login_failed", { detail: { email }, ip: req.ip });
         return reply.code(401).send({ error: "invalid_credentials" });
       }
-      await pool.query("UPDATE users SET failed_logins=0, locked_until=NULL WHERE id=$1", [u.id]);
+      await pool.query("UPDATE users SET failed_logins=0, locked_until=NULL, last_login_at=now() WHERE id=$1", [u.id]);
       const s = await createSession(pool, u.id, config.sessionTtlHours);
       reply.setCookie(COOKIE_NAME, s.token, {
         httpOnly: true, sameSite: "strict", secure: config.cookieSecure, path: "/", expires: s.expires,
@@ -116,5 +142,8 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
   await mosaicRoutes(app, pool);
   await syncRoutes(app, pool);
   await reportRoutes(app, pool);
+  await userRoutes(app, pool);
+  await retentionRoutes(app, pool);
+  app.get("/api/v1/openapi.json", { preHandler: requirePermission(pool, "event:create") }, async () => buildOpenApi(app.rspRoutes, "0.1.0"));
   return app;
 }

@@ -43,9 +43,9 @@ export function sniffImage(b: Buffer): ImageKind | null {
 /** SVG can carry script. Reject (not "clean") anything active so what we store is exactly what was inspected. */
 export function svgIsSafe(svg: string): boolean {
   const s = svg.toLowerCase();
-  if (/<\s*(script|foreignobject|iframe|object|embed|animate|set)\b/.test(s)) return false;
+  if (/<\s*(script|foreignobject|iframe|object|embed|animate|set|link|meta|base|audio|video)\b/.test(s)) return false;
   if (/\bon[a-z]+\s*=/.test(s)) return false;
-  if (/javascript:|data:text\/html|<!entity|<!doctype/.test(s)) return false;
+  if (/javascript:|data:text\/html|<!entity|<!doctype|@import/.test(s)) return false;     // @import would let a stylesheet pull in a remote file
   for (const m of s.matchAll(/(?:xlink:)?href\s*=\s*["']([^"']*)["']/g)) {
     if (!(m[1].startsWith("#") || m[1].startsWith("data:image/png") || m[1].startsWith("data:image/jpeg"))) return false;
   }

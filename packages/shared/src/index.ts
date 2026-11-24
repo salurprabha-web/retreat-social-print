@@ -35,3 +35,4 @@ export * from "./sponsor";
 export * from "./mosaic";
 export * from "./offline";
 export * from "./reports";
+export * from "./password";
