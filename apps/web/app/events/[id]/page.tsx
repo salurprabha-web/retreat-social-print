@@ -13,7 +13,7 @@ interface Ev {
   id: string; name: string; slug: string; guestToken: string; clientName: string | null; hashtag: string | null;
   eventDate: string | null; status: string; settings: Settings;
 }
-const TABS = ["Overview", "Branding", "Settings", "Guest page (Phase 4)", "Frames (Phase 6)", "Printing (Phase 10)"];
+const TABS = ["Overview", "Branding", "Settings", "Guest page", "Frames (Phase 6)", "Printing (Phase 10)"];
 
 function Body({ me }: { me: Me }) {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +64,7 @@ function Body({ me }: { me: Me }) {
       <a href="/events" className="muted">&larr; All events</a>
       <h1>{ev.name} <span className={"pill " + ev.status}>{ev.status}</span></h1>
       <div className="sub">{ev.clientName ?? "No client"} &middot; {ev.eventDate ?? "No date"} {ev.hashtag && <>&middot; #{ev.hashtag}</>}</div>
-      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => setTab(t)}>{t}</button>)}</div>
+      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => (t === "Guest page" ? (window.location.href = `/events/${id}/builder`) : setTab(t))}>{t}</button>)}</div>
       {msg && <div className="ok" role="status">{msg}</div>}{err && <div className="err" role="alert">{err}</div>}
 
       {tab === "Overview" && (
