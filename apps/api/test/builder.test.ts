@@ -88,7 +88,7 @@ describe("publish lifecycle", () => {
     expect(pub.statusCode).toBe(200);
     expect(pub.json().definition.theme.textColor).toBe("#123456");
     expect(pub.json().event.name).toBe("Builder A");
-    expect(Object.keys(pub.json())).toEqual(["definition", "event", "logos"]);   // nothing else leaks
+    expect(Object.keys(pub.json())).toEqual(["definition", "event", "logos", "settings"]);   // nothing else leaks
   });
   it("editing the draft does not change the live page until republished", async () => {
     const d = await working(evA); d.theme.textColor = "#abcdef";

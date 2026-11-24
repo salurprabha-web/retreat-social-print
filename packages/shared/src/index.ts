@@ -26,3 +26,4 @@ export const loginSchema = z.object({
 
 export * from "./page";
 export * from "./templates";
+export * from "./photo";

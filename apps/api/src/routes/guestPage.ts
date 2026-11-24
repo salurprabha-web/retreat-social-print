@@ -173,11 +173,13 @@ export async function guestPageRoutes(app: FastifyInstance, pool: Pool) {
     const pe = await publicEvent((req.params as any).token);
     if (!pe) return reply.code(404).send({ error: "not_available" });
     const info = (await eventInfo(pool, pe.id))!;
-    const b = (await pool.query("SELECT branding FROM event_settings WHERE event_id=$1", [pe.id])).rows[0]?.branding ?? {};
+    const st = (await pool.query("SELECT branding,max_upload_mb,require_consent FROM event_settings WHERE event_id=$1", [pe.id])).rows[0];
+    const b = st?.branding ?? {};
     return {
       definition: pe.definition,
       event: { name: info.name, hashtag: info.hashtag, eventDate: info.eventDate, clientName: info.clientName },
       logos: { event: !!b.eventLogo, client: !!b.clientLogo },
+      settings: { maxUploadMb: st?.max_upload_mb ?? 25, requireConsent: st?.require_consent ?? true },
     };
   });
 
