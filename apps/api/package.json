@@ -1,5 +1,5 @@
 { "name": "@rsp/api", "version": "0.1.0", "private": true, "type": "module",
-  "scripts": { "dev": "tsx watch src/index.ts", "start": "tsx src/index.ts",
+  "scripts": { "dev": "tsx watch src/index.ts", "dev:local": "tsx src/dev.ts", "start": "tsx src/index.ts",
     "migrate": "tsx src/migrate-cli.ts", "seed:admin": "tsx src/seed-admin.ts",
     "test": "vitest run", "typecheck": "tsc -p ." },
   "dependencies": { "@fastify/cookie": "^11.0.1", "@fastify/rate-limit": "^10.2.1",
