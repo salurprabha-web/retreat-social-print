@@ -15,7 +15,7 @@ import { FRIENDLY, PhotoError, prepare, uploadPhoto } from "../../lib/photo";
 export interface PublicData {
   definition: PageDefinition; event: EventInfo; logos: { event: boolean; client: boolean };
   settings: {
-    maxUploadMb: number; requireConsent: boolean;
+    maxUploadMb: number; requireConsent: boolean; photoWallEnabled?: boolean;
     share: ReturnType<typeof resolveShare>; instagramHandle: string | null; suggestedCaption: string | null;
   };
 }
@@ -53,6 +53,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   const screen = seq[Math.min(i, seq.length - 1)];
   const stepInfo = (id: StepId) => def.journey.steps.find((s) => s.id === id)!;
   const [consent, setConsent] = useState(false);
+  const [wallOptOut, setWallOptOut] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [session, setSession] = useState<{ id: string; code: string } | null>(null);
@@ -77,7 +78,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   const slotAspect = (n: number) => { const l = slots.find((x) => x.slot === n); return l && frame ? (l.h * frame.heightPx) / (l.w * frame.widthPx) : 1.5; };
 
   const restart = useCallback(() => {
-    setI(0); setConsent(false); setFields({}); setErrors({}); setSession(null); setMsg(""); setCam(false); setProgress(null); setLowRes(false);
+    setI(0); setConsent(false); setWallOptOut(false); setFields({}); setErrors({}); setSession(null); setMsg(""); setCam(false); setProgress(null); setLowRes(false);
     setPhoto((p) => { if (p) URL.revokeObjectURL(p.url); return null; }); setAdjust(NO_ADJUST); setBusy(false);
     setHeld((h) => { new Set(Object.values(h).map((x) => x.url)).forEach((u) => URL.revokeObjectURL(u)); return {}; });
     setFrameId(null); setFinal(null); setActiveSlot(1); setFinalizedId(null); setPrintStatus(null);
@@ -117,7 +118,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
     const input = { consent, fields };
     const v = validateGuestInput(def, input, data.settings.requireConsent);
     setErrors(v.errors); if (!v.ok) return;
-    if (await startSession(input)) go();
+    if (await startSession({ ...input, wallOptOut })) go();
   }
   const onStart = async () => {
     const next = seq[i + 1];
@@ -250,6 +251,12 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
               onChange={(e) => { setConsent(e.target.checked); if (consentField) setFields({ ...fields, [consentField.id]: e.target.checked ? "true" : "" }); }} />
             <span>{consentField?.label || "I agree that my photo may be printed and shown at this event."}
               {(privacy || terms) && <> <a style={{ color: "inherit" }} href={privacy || terms} target="_blank" rel="noopener noreferrer">Privacy notice</a></>}</span>
+          </label>
+        )}
+        {data.settings.photoWallEnabled && (
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: 0, color: "inherit", fontSize: ".95em" }}>
+            <input type="checkbox" checked={wallOptOut} style={{ width: "1.3em", height: "1.3em", marginTop: 2, flex: "none" }} onChange={(e) => setWallOptOut(e.target.checked)} />
+            <span>Keep my photo off the big screen (the event&apos;s live photo wall).</span>
           </label>
         )}
         {(errors._consent || (consentField && errors[consentField.id])) && <span role="alert" style={{ ...errStyle, padding: "4px 10px", alignSelf: "flex-start" }}>{errors._consent || errors[consentField!.id]}</span>}

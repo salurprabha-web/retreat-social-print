@@ -18,6 +18,7 @@ import { qrRoutes } from "./routes/qr";
 import { photoRoutes } from "./routes/photos";
 import { printRoutes } from "./routes/print";
 import { agentRoutes } from "./routes/agents";
+import { wallRoutes } from "./routes/wall";
 import { PrintError } from "./printService";
 
 export async function buildApp(pool: Pool) {
@@ -29,7 +30,7 @@ export async function buildApp(pool: Pool) {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");
-    reply.header("Cache-Control", "no-store");
+    if (!reply.hasHeader("Cache-Control")) reply.header("Cache-Control", "no-store");   // routes that opt in to caching (wall images) keep theirs
   });
 
   app.setErrorHandler((err: any, _req, reply) => {
@@ -94,5 +95,6 @@ export async function buildApp(pool: Pool) {
   await photoRoutes(app, pool);
   await printRoutes(app, pool);
   await agentRoutes(app, pool);
+  await wallRoutes(app, pool);
   return app;
 }

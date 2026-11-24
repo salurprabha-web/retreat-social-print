@@ -7,6 +7,8 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { can, requirePermission } from "../auth";
 import { deleteFile, getFile, putFile, streamFile } from "../storage";
+import { notifyWall } from "../wallBus";
+import { wallImageKeys } from "./wall";
 import { cancelJobsForCompositions } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -132,7 +134,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       `DELETE FROM photo_uploads u WHERE u.id = ANY($1) AND u.event_id=$2
           AND NOT EXISTS (SELECT 1 FROM composition_photos cp WHERE cp.upload_id=u.id)
           AND NOT EXISTS (SELECT 1 FROM final_compositions f WHERE f.upload_id=u.id) RETURNING id,storage_key`, [ups, eventId])).rows;
-    for (const c of comps) { keys.push(c.storage_key); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${s}.jpg`); }
+    for (const c of comps) { keys.push(c.storage_key, ...wallImageKeys(eventId, c.id)); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${s}.jpg`); }
     for (const o of orphan) { keys.push(o.storage_key); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/u-${o.id}-${s}.jpg`); }
     return keys;
   }
@@ -156,12 +158,14 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
         return k;
       });
       for (const k of keys) await deleteFile(k).catch(() => {});
+      notifyWall(eventId);
       return { deleted: doomed.length, blocked, missing };
     }
 
     if (b.action === "show_wall" || b.action === "hide_wall") {
       const r = await pool.query("UPDATE final_compositions SET show_on_wall=$3 WHERE id = ANY($1) AND event_id=$2 AND deleted_at IS NULL", [existing, eventId, b.action === "show_wall"]);
       await audit(pool, req.user!.id, b.action, { eventId, entity: "composition", detail: { ids: existing }, ip: req.ip });
+      notifyWall(eventId);
       return { updated: r.rowCount, missing };
     }
     const status = ({ approve: "approved", reject: "rejected", pending: "pending" } as const)[b.action];
@@ -170,6 +174,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       [existing, eventId, status, req.user!.id, b.note || null]);
     await audit(pool, req.user!.id, `photo_${status}`, { eventId, entity: "composition", detail: { ids: existing, note: b.note ?? null }, ip: req.ip });
     if (status === "rejected") await cancelJobsForCompositions(pool, eventId, existing, req.user!.id, "Picture rejected");
+    notifyWall(eventId);
     return { updated: r.rowCount, missing };
   });
 
@@ -184,6 +189,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
     await audit(pool, req.user!.id, `photo_${b.status}`, { eventId, entity: "composition", entityId: cid, detail: { note: b.note ?? null }, ip: req.ip });
     if (b.status === "rejected") await cancelJobsForCompositions(pool, eventId, [cid], req.user!.id, "Picture rejected");
+    notifyWall(eventId);
     return { ok: true };
   });
 
@@ -197,13 +203,14 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     const counts = await withTx(pool, async (tx) => {
       const comps = (await tx.query("SELECT id,storage_key FROM final_compositions WHERE session_id=$1 AND event_id=$2", [s.id, eventId])).rows;
       const ups = (await tx.query("SELECT id,storage_key FROM photo_uploads WHERE session_id=$1 AND event_id=$2", [s.id, eventId])).rows;
-      for (const c of comps) { keys.push(c.storage_key); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${z}.jpg`); }
+      for (const c of comps) { keys.push(c.storage_key, ...wallImageKeys(eventId, c.id)); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${z}.jpg`); }
       for (const u of ups) { keys.push(u.storage_key); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/u-${u.id}-${z}.jpg`); }
       await tx.query("DELETE FROM guest_sessions WHERE id=$1 AND event_id=$2", [s.id, eventId]);   // cascades uploads, pictures, shares and print jobs
       await audit(tx, req.user!.id, "guest_data_delete", { eventId, entity: "guest", entityId: code, detail: { pictures: comps.length, originals: ups.length }, ip: req.ip });
       return { pictures: comps.length, originals: ups.length };
     });
     for (const k of keys) await deleteFile(k).catch(() => {});
+    notifyWall(eventId);
     return { ok: true, ...counts };
   });
 

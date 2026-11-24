@@ -30,3 +30,4 @@ export * from "./photo";
 export * from "./frame";
 export * from "./share";
 export * from "./print";
+export * from "./wall";

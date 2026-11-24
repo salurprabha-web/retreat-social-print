@@ -50,14 +50,14 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
   app.post("/api/v1/public/g/:token/session", { config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } } }, async (req, reply) => {
     const pe = await pubEvent((req.params as any).token);
     if (!pe) return reply.code(404).send({ error: "not_available" });
-    const input = z.object({ consent: z.boolean().default(false), fields: z.record(z.string().max(40), z.string().max(300)).default({}) }).parse(req.body ?? {});
+    const input = z.object({ consent: z.boolean().default(false), fields: z.record(z.string().max(40), z.string().max(300)).default({}), wallOptOut: z.boolean().default(false) }).parse(req.body ?? {});
     const v = validateGuestInput(pe.def, input, pe.requireConsent);
     if (!v.ok) return reply.code(400).send({ error: "validation", errors: v.errors });
     for (let i = 0; i < 8; i++) {
       try {
         const r = await pool.query(
-          "INSERT INTO guest_sessions(event_id,guest_code,consent_at,fields) VALUES ($1,$2,$3,$4) RETURNING id,guest_code",
-          [pe.id, newCode(), input.consent ? new Date() : null, JSON.stringify(v.clean)]);
+          "INSERT INTO guest_sessions(event_id,guest_code,consent_at,fields,wall_opt_out) VALUES ($1,$2,$3,$4,$5) RETURNING id,guest_code",
+          [pe.id, newCode(), input.consent ? new Date() : null, JSON.stringify(v.clean), input.wallOptOut]);
         return reply.code(201).send({ sessionId: r.rows[0].id, guestCode: r.rows[0].guest_code });
       } catch (e: any) { if (e.code !== "23505") throw e; }   // code clash within the event: draw another
     }

@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { notifyWall } from "./wallBus";
 import { MAX_COPIES, REPRINTABLE, canTransition, initialStatus, type PrintMode, type PrintStatus } from "@rsp/shared";
 import type { Pool, Tx } from "./db";
 import { withTx } from "./db";
@@ -65,6 +66,7 @@ export async function finalizeComposition(pool: Pool, eventId: string, sessionId
     return { job: id ? { id, status: initialStatus(mode) } : existing, created: !!id };
   });
   notifyPrint(eventId);
+  notifyWall(eventId);                                  // a finished picture may now be eligible for the wall
   return out;
 }
 
@@ -80,6 +82,7 @@ export async function applyAction(pool: Pool, eventId: string, jobId: string, ac
     if (action === "reject") await tx.query("UPDATE final_compositions SET moderation='rejected', moderated_by=$3, moderated_at=now(), moderation_note=$4 WHERE id=$1 AND event_id=$2", [job.composition_id, eventId, userId, note ?? null]);
   });
   notifyPrint(eventId);
+  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 export async function setCopies(pool: Pool, eventId: string, jobId: string, copies: number, userId: string) {
@@ -92,6 +95,7 @@ export async function setCopies(pool: Pool, eventId: string, jobId: string, copi
     await tx.query("INSERT INTO print_job_events(event_id,job_id,from_status,to_status,user_id,note) VALUES ($1,$2,$3,$3,$4,$5)", [eventId, jobId, j.status, userId, `Copies ${j.copies} → ${copies}`]);
   });
   notifyPrint(eventId);
+  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /**
@@ -122,6 +126,7 @@ export async function setPaused(pool: Pool, eventId: string, paused: boolean, us
   await pool.query("UPDATE event_settings SET print_paused=$2, updated_at=now() WHERE event_id=$1", [eventId, paused]);
   await pool.query("INSERT INTO audit_logs(event_id,user_id,action) VALUES ($1,$2,$3)", [eventId, userId, paused ? "print_pause" : "print_resume"]);
   notifyPrint(eventId);
+  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /* ---------- Used by the Windows print agent (Phase 11) and by tests that simulate it ---------- */
@@ -149,6 +154,7 @@ export async function claimNext(pool: Pool, eventId: string, printerId: string |
 export async function reportResult(pool: Pool, eventId: string, jobId: string, ok: boolean, error?: string) {
   await withTx(pool, (tx) => transition(tx, eventId, jobId, ok ? "printed" : "failed", { expectFrom: ["printing"], error: ok ? null : error ?? "Print failed", note: ok ? "Printed" : error ?? "Print failed" }));
   notifyPrint(eventId);
+  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /** Jobs stuck in "printing" (agent crashed or lost connection) go back to the queue instead of hanging forever. */
