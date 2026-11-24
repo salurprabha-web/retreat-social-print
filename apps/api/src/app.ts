@@ -13,6 +13,7 @@ import { dashboardRoutes } from "./routes/dashboard";
 import { eventRoutes } from "./routes/events";
 import { guestPageRoutes } from "./routes/guestPage";
 import { guestFlowRoutes } from "./routes/guestFlow";
+import { frameRoutes } from "./routes/frames";
 
 export async function buildApp(pool: Pool) {
   const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
@@ -82,5 +83,6 @@ export async function buildApp(pool: Pool) {
   await eventRoutes(app, pool);
   await guestPageRoutes(app, pool);
   await guestFlowRoutes(app, pool);
+  await frameRoutes(app, pool);
   return app;
 }
