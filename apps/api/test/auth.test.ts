@@ -86,6 +86,7 @@ describe("dashboard scoping", () => {
     const m = (await get("/api/v1/dashboard/overview", mgr.cookie)).json();
     expect(s.totalEvents).toBeGreaterThanOrEqual(2);
     expect(m.totalEvents).toBe(1);
-    expect(s.photosPrinted).toBe(0);
+    expect(m.photosPrinted).toBe(0);                      // the manager's own event has no prints; the super admin's total spans every test event
+    expect(s.photosPrinted).toBeGreaterThanOrEqual(m.photosPrinted);
   });
 });

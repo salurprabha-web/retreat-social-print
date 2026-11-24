@@ -224,7 +224,7 @@ describe("staff access", () => {
     const l = await adm(op, "GET", `/api/v1/events/${evA}/compositions`);
     expect(l.statusCode).toBe(200);
     expect(l.json().compositions.length).toBeGreaterThan(3);
-    expect(Object.keys(l.json().compositions[0]).sort()).toEqual(["bytes", "createdAt", "downloads", "frame", "guestCode", "heightPx", "id", "moderatedAt", "moderatedBy", "moderation", "moderationNote", "printJobs", "shareAttempts", "showOnWall", "slots", "widthPx"]);
+    expect(Object.keys(l.json().compositions[0]).sort()).toEqual(["bytes", "createdAt", "downloads", "finalized", "frame", "guestCode", "heightPx", "id", "moderatedAt", "moderatedBy", "moderation", "moderationNote", "printJobs", "shareAttempts", "showOnWall", "slots", "widthPx"]);
     expect((await adm(mgrB, "GET", `/api/v1/events/${evA}/compositions`)).statusCode).toBe(403);
     const id = l.json().compositions[0].id;
     expect((await adm(mgrB, "GET", `/api/v1/events/${evB}/compositions/${id}/image`)).statusCode).toBe(404);   // right event URL, other event's image

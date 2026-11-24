@@ -96,3 +96,36 @@ a.mini { text-decoration: none; padding: 6px 10px; font-size: 13px; border: 1px 
 .mbox.pview { width: min(1000px, 100%); max-height: 94vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; overflow: auto; }
 .pview .pleft img { width: 100%; max-height: 78vh; object-fit: contain; background: #8883; border-radius: 6px; }
 @media (max-width: 800px) { .mbox.pview { grid-template-columns: 1fr; } }
+/* ----- Print operator dashboard: big targets, high contrast, usable on a tablet ----- */
+.op { min-height: 100vh; padding: 14px 18px 40px; background: var(--bg); }
+.ophead { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ophead h1 { margin: 0; font-size: 26px; } .opback { font-size: 13px; color: var(--muted); }
+.oplive { font-weight: 700; } .oplive.live { color: var(--ok); } .oplive.reconnecting { color: #b7791f; } .oplive.offline { color: var(--bad); }
+.opctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.opctl label { display: flex; gap: 8px; align-items: center; margin: 0; color: var(--ink); font-weight: 600; } .opctl select { width: auto; min-height: 48px; font-size: 16px; }
+.op button, .op a.opbtn { min-height: 48px; padding: 10px 18px; font-size: 16px; font-weight: 700; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; width: auto; margin: 0; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.op button:disabled { opacity: .5; cursor: wait; }
+.op .op-go { background: #1d7a4d; border-color: #1d7a4d; color: #fff; } .op .op-no { background: #fff; color: var(--bad); border-color: var(--bad); }
+.op .op-pause { background: #b7791f; border-color: #b7791f; color: #fff; } .op .op-neutral { background: var(--panel); }
+.oppaused { background: #b7791f; color: #fff; padding: 12px 16px; border-radius: 10px; font-weight: 700; margin: 8px 0; }
+.operrbar { background: var(--bad); color: #fff; padding: 10px 14px; border-radius: 10px; margin: 8px 0; }
+.optabs { display: none; gap: 6px; margin: 8px 0; overflow-x: auto; } .optabs button { white-space: nowrap; } .optabs button.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.opcols { display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 14px; align-items: start; }
+.opcol { background: rgba(127,127,127,.07); border-radius: 14px; padding: 10px; min-height: 220px; }
+.opcolhead h2 { margin: 0; font-size: 18px; } .opcount { background: var(--ink); color: var(--bg); border-radius: 99px; padding: 1px 10px; font-size: 14px; margin-left: 6px; }
+.opcolhead { margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.opcard { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.opcard.st-pending, .opcard.st-reprint_requested { border-color: #b7791f; } .opcard.st-approved { border-color: #2563eb; } .opcard.st-printing { border-color: #2563eb; background: rgba(37,99,235,.07); }
+.opcard.st-printed { border-color: #1d7a4d; } .opcard.st-failed { border-color: var(--bad); }
+.oprow { display: flex; gap: 10px; } .opthumb { padding: 0 !important; min-height: 0 !important; border: 0 !important; background: transparent !important; flex: none; width: 42%; }
+.opthumb img { width: 100%; display: block; border-radius: 8px; background: #8883; }
+.opinfo { flex: 1; min-width: 0; } .opguest { font-size: 22px; font-weight: 800; letter-spacing: .04em; } .opmeta { font-size: 13px; color: var(--muted); }
+.opstatus { font-weight: 700; margin: 4px 0; } .operr { color: var(--bad); font-size: 13px; margin-bottom: 4px; }
+.opbadge { font-size: 12px; background: var(--brand); color: #fff; border-radius: 6px; padding: 1px 6px; vertical-align: middle; }
+.opcopies { display: flex; align-items: center; gap: 8px; font-size: 14px; } .opcopies button { min-height: 40px !important; min-width: 40px; padding: 0 !important; } .opcopies b { font-size: 20px; min-width: 24px; text-align: center; }
+.opthumbs { display: flex; gap: 4px; margin-top: 6px; } .opthumbs img { height: 44px; border-radius: 4px; border: 1px solid var(--line); }
+.opactions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; } .opactions > * { flex: 1 1 110px; }
+.opempty { color: var(--muted); text-align: center; padding: 20px 0; }
+@media (max-width: 1100px) { .optabs { display: flex; } .opcols { grid-template-columns: 1fr; } .opcol { display: none; } .opcol.show { display: block; } }
+.op button.opthumb { width: 42%; min-width: 0; display: block; padding: 0; min-height: 0; border: 0; background: transparent; flex: none; }
+.op .opthumb img { width: 100%; height: auto; }

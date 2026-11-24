@@ -65,6 +65,8 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   const [final, setFinal] = useState<Final | null>(null);
   const [cam, setCam] = useState(false); const [progress, setProgress] = useState<number | null>(null);
   const [lowRes, setLowRes] = useState(false);
+  const [finalizedId, setFinalizedId] = useState<string | null>(null);
+  const [printStatus, setPrintStatus] = useState<string | null>(null);
   const [idle, setIdle] = useState(false);
   const active = useRef(Date.now());
   const camInput = useRef<HTMLInputElement>(null); const fileInput = useRef<HTMLInputElement>(null);
@@ -78,7 +80,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
     setI(0); setConsent(false); setFields({}); setErrors({}); setSession(null); setMsg(""); setCam(false); setProgress(null); setLowRes(false);
     setPhoto((p) => { if (p) URL.revokeObjectURL(p.url); return null; }); setAdjust(NO_ADJUST); setBusy(false);
     setHeld((h) => { new Set(Object.values(h).map((x) => x.url)).forEach((u) => URL.revokeObjectURL(u)); return {}; });
-    setFrameId(null); setFinal(null); setActiveSlot(1);
+    setFrameId(null); setFinal(null); setActiveSlot(1); setFinalizedId(null); setPrintStatus(null);
   }, []);
 
   // Idle screen on the landing page; session reset elsewhere (kiosk hygiene: the next guest never sees the previous one's photo).
@@ -185,6 +187,14 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   }
   async function afterEdit() { if (isLastBeforePreview("edit")) { if (await composeWith(held)) go(); } else go(); }
   useEffect(() => { if (screen === "preview" && !final && frame && session && !busy) void composeWith(fillMissing(held)); /* eslint-disable-next-line */ }, [screen]);
+  // Reaching the share or final screen means the guest is happy with the picture: tell the server, which queues it for printing.
+  // Safe to repeat (the server queues a picture once); a failed call is retried the next time the picture changes screens.
+  useEffect(() => {
+    if (!final || !session || (screen !== "share" && screen !== "done") || finalizedId === final.id) return;
+    fetch(`/api/v1/public/g/${token}/composition/${final.id}/finalize`, { method: "POST", headers: { "x-guest-session": session.id } })
+      .then(async (r) => { if (!r.ok) return; const j = await r.json(); setFinalizedId(final.id); setPrintStatus(j.queued ? j.status : null); })
+      .catch(() => {});
+  }, [screen, final, session, token, finalizedId]);
 
   const btn = (primary = true): CSSProperties => ({
     background: primary ? t.button.color : "transparent", color: primary ? t.button.textColor : "inherit", border: primary ? 0 : `1px solid ${t.button.color}`,
@@ -342,7 +352,9 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
         <h2 style={{ margin: 0, fontSize: "1.8em" }}>{def.messages.success}</h2>
         {final && <img src={final.url} alt="Your final picture" style={{ width: "min(100%, 20em)", borderRadius: 6, boxShadow: "0 6px 24px rgba(0,0,0,.4)", background: "#fff" }} />}
         {final && <a href={`${final.url}&dl=1`} download="photo.jpg" style={{ ...btn(), textDecoration: "none", display: "inline-block" }}>Download photo</a>}
-        {session && <p style={{ margin: 0 }}>Your guest ID: <b style={{ fontSize: "1.4em", letterSpacing: ".1em" }}>{session.code}</b></p>}
+        {printStatus === "approved" && <p style={{ margin: 0, fontWeight: 700 }}>Your photo is being printed. Please collect it at the print desk.</p>}
+        {printStatus === "pending" && <p style={{ margin: 0, fontWeight: 700 }}>Your photo has been sent to the print desk.</p>}
+        {session && <p style={{ margin: 0 }}>Your guest ID: <b style={{ fontSize: "1.4em", letterSpacing: ".1em" }}>{session.code}</b>{printStatus && <><br /><span style={{ fontSize: ".85em", opacity: .85 }}>Show this ID at the print desk.</span></>}</p>}
         {lowRes && <p style={{ margin: 0, fontSize: ".9em", opacity: .9 }}>Your photo is small, so the print may look soft.</p>}
         {!final && <p style={{ margin: 0, opacity: .85, maxWidth: "28em" }}>Your photo has been saved. This event has no frames available yet.</p>}
         <button type="button" style={btn(false)} onClick={restart}>{stepInfo("success").buttonLabel}</button>

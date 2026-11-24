@@ -21,7 +21,7 @@ function Body({ me }: { me: Me }) {
   const [items, setItems] = useState<Comp[]>([]); const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState<Counts>({ pending: 0, approved: 0, rejected: 0, all: 0 });
   const [frames, setFrames] = useState<Frame[]>([]);
-  const [f, setF] = useState({ status: "" as Status, q: "", frameId: "", wall: "", sort: "newest", from: "", to: "" });
+  const [f, setF] = useState({ status: "" as Status, q: "", frameId: "", wall: "", sort: "newest", from: "", to: "", drafts: false });
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<string | null>(null); const [detail, setDetail] = useState<Detail | null>(null);
   const [msg, setMsg] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
@@ -33,6 +33,7 @@ function Body({ me }: { me: Me }) {
 
   const query = useCallback((offset: number) => {
     const p = new URLSearchParams({ limit: String(PAGE), offset: String(offset), sort: f.sort });
+    if (!f.drafts) p.set("finalized", "true");           // abandoned drafts (guest never tapped Finish) are hidden unless asked for
     if (f.status) p.set("status", f.status); if (f.q.trim()) p.set("q", f.q.trim()); if (f.frameId) p.set("frameId", f.frameId); if (f.wall) p.set("wall", f.wall);
     if (f.from) p.set("from", new Date(f.from + "T00:00:00").toISOString()); if (f.to) p.set("to", new Date(new Date(f.to + "T00:00:00").getTime() + 864e5).toISOString());
     return p;
@@ -119,6 +120,7 @@ function Body({ me }: { me: Me }) {
         <input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} aria-label="From date" />
         <input type="date" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} aria-label="To date" />
         <select value={f.sort} onChange={(e) => setF({ ...f, sort: e.target.value })} aria-label="Sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select>
+        <label className="chk"><input type="checkbox" checked={f.drafts} onChange={(e) => setF({ ...f, drafts: e.target.checked })} /> Show unfinished</label>
         <a className="mini" href={exportUrl()} style={{ color: "var(--ink)" }}>Download ZIP ({f.status || "approved"})</a>
       </div>
 

@@ -16,6 +16,8 @@ import { guestFlowRoutes } from "./routes/guestFlow";
 import { frameRoutes } from "./routes/frames";
 import { qrRoutes } from "./routes/qr";
 import { photoRoutes } from "./routes/photos";
+import { printRoutes } from "./routes/print";
+import { PrintError } from "./printService";
 
 export async function buildApp(pool: Pool) {
   const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
@@ -31,6 +33,7 @@ export async function buildApp(pool: Pool) {
 
   app.setErrorHandler((err: any, _req, reply) => {
     if (err instanceof ZodError) return reply.code(400).send({ error: "validation", issues: err.issues });
+    if (err instanceof PrintError) return reply.code(err.statusCode).send({ error: err.code, ...err.extra });   // expected refusals from the print queue
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ error: err.message });
     console.error(err);
     return reply.code(500).send({ error: "internal" });
@@ -88,5 +91,6 @@ export async function buildApp(pool: Pool) {
   await frameRoutes(app, pool);
   await qrRoutes(app, pool);
   await photoRoutes(app, pool);
+  await printRoutes(app, pool);
   return app;
 }

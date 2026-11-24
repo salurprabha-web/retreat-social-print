@@ -11,6 +11,7 @@ import { deleteFile, getFile, putFile } from "../storage";
 import { config } from "../config";
 import { composeFrame, type SlotImage } from "../compose";
 import { signCompositionPath, verifyComposition } from "../signing";
+import { finalizeComposition } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // no 0/O/1/I: read aloud at an event desk
@@ -216,6 +217,15 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });
     const r = (await pool.query("SELECT id FROM final_compositions WHERE id=$1 AND session_id=$2 AND event_id=$3 AND deleted_at IS NULL", [cid, g.sessionId, g.pe.id])).rows[0];
     return r ? { url: signCompositionPath(r.id) } : reply.code(404).send({ error: "not_found" });
+  });
+
+  // The guest tapped Finish: from here the picture is eligible for printing (what happens next depends on the event's print mode).
+  app.post("/api/v1/public/g/:token/composition/:cid/finalize", { config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const g = await authGuest(req, reply); if (!g) return;
+    const cid = (req.params as any).cid as string;
+    if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });
+    const r = await finalizeComposition(pool, g.pe.id, g.sessionId, cid);
+    return reply.code(r.created ? 201 : 200).send({ finalized: true, queued: !!r.job, status: r.job?.status ?? null });
   });
 
   // A share tap is recorded as an ATTEMPT only. Neither the browser nor Instagram tells us whether a post happened, so we never claim it.

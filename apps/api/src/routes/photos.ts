@@ -7,6 +7,7 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { can, requirePermission } from "../auth";
 import { deleteFile, getFile, putFile, streamFile } from "../storage";
+import { cancelJobsForCompositions } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const THUMB_SIZES = [200, 400, 800] as const;
@@ -18,6 +19,7 @@ const listQuery = z.object({
   frameId: z.string().uuid().optional(),
   from: z.string().datetime().optional(), to: z.string().datetime().optional(),
   wall: z.enum(["true", "false"]).optional(),
+  finalized: z.enum(["true", "false"]).optional(),                // only pictures the guest finished (true) or abandoned drafts (false)
   sort: z.enum(["newest", "oldest"]).default("newest"),
   limit: z.coerce.number().int().min(1).max(100).default(48),
   offset: z.coerce.number().int().min(0).default(0),
@@ -38,6 +40,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     if (f.from) w.push(`c.created_at >= ${add(f.from)}`);
     if (f.to) w.push(`c.created_at < ${add(f.to)}`);
     if (f.wall) w.push(`c.show_on_wall=${add(f.wall === "true")}`);
+    if (f.finalized) w.push(f.finalized === "true" ? "c.finalized_at IS NOT NULL" : "c.finalized_at IS NULL");
     return { sql: w.join(" AND "), v };
   }
   const FROM = `FROM final_compositions c
@@ -46,7 +49,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       LEFT JOIN users u ON u.id=c.moderated_by`;
   const SLOTS = `(SELECT COALESCE(json_agg(json_build_object('slot',cp.slot,'uploadId',cp.upload_id,'width',up.width,'height',up.height) ORDER BY cp.slot),'[]'::json)
                     FROM composition_photos cp JOIN photo_uploads up ON up.id=cp.upload_id AND up.event_id=cp.event_id WHERE cp.composition_id=c.id) AS slots`;
-  const COLS = `c.id,c.width_px,c.height_px,c.bytes,c.moderation,c.moderation_note,c.moderated_at,c.show_on_wall,c.created_at,s.guest_code,
+  const COLS = `c.id,c.width_px,c.height_px,c.bytes,c.moderation,c.moderation_note,c.moderated_at,c.show_on_wall,c.created_at,c.finalized_at,s.guest_code,
       f.id AS frame_id,f.name AS frame_name,u.name AS moderator,
       (SELECT count(*)::int FROM share_events se WHERE se.composition_id=c.id AND se.channel='download') AS downloads,
       (SELECT count(*)::int FROM share_events se WHERE se.composition_id=c.id AND se.channel<>'download') AS share_attempts,
@@ -54,7 +57,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       ${SLOTS}`;
   const shape = (r: any) => ({
     id: r.id, guestCode: r.guest_code, frame: { id: r.frame_id, name: r.frame_name }, widthPx: r.width_px, heightPx: r.height_px, bytes: Number(r.bytes),
-    moderation: r.moderation, moderationNote: r.moderation_note, moderatedBy: r.moderator, moderatedAt: r.moderated_at, showOnWall: r.show_on_wall,
+    moderation: r.moderation, moderationNote: r.moderation_note, moderatedBy: r.moderator, moderatedAt: r.moderated_at, showOnWall: r.show_on_wall, finalized: !!r.finalized_at,
     createdAt: r.created_at, downloads: r.downloads, shareAttempts: r.share_attempts, printJobs: r.print_jobs, slots: r.slots,
   });
 
@@ -166,6 +169,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       `UPDATE final_compositions SET moderation=$3, moderated_by=$4, moderated_at=now(), moderation_note=$5 WHERE id = ANY($1) AND event_id=$2 AND deleted_at IS NULL`,
       [existing, eventId, status, req.user!.id, b.note || null]);
     await audit(pool, req.user!.id, `photo_${status}`, { eventId, entity: "composition", detail: { ids: existing, note: b.note ?? null }, ip: req.ip });
+    if (status === "rejected") await cancelJobsForCompositions(pool, eventId, existing, req.user!.id, "Picture rejected");
     return { updated: r.rowCount, missing };
   });
 
@@ -179,6 +183,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       [cid, eventId, b.status, req.user!.id, b.note || null]);
     if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
     await audit(pool, req.user!.id, `photo_${b.status}`, { eventId, entity: "composition", entityId: cid, detail: { note: b.note ?? null }, ip: req.ip });
+    if (b.status === "rejected") await cancelJobsForCompositions(pool, eventId, [cid], req.user!.id, "Picture rejected");
     return { ok: true };
   });
 

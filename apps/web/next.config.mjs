@@ -1,6 +1,7 @@
 const api = process.env.API_URL ?? "http://localhost:4100";
 export default {
   transpilePackages: ["@rsp/shared"],
+  compress: false,   // gzip would buffer the live (SSE) print stream; compression belongs to the reverse proxy
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${api}/api/:path*` },
