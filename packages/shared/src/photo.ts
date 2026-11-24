@@ -36,7 +36,7 @@ export function offsetsFor(l: { ox: number; oy: number }, left: number, top: num
 }
 
 export const ACCEPTED_PHOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
-export const MAX_UPLOADS_PER_SESSION = 10;
+export const MAX_UPLOADS_PER_SESSION = 24;
 
 export interface GuestInput { consent: boolean; fields: Record<string, string> }
 

@@ -1,3 +1,4 @@
+import "./fonts";
 import "./globals.css";
 import type { ReactNode } from "react";
 

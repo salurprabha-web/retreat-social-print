@@ -16,16 +16,28 @@ export function deviceForWidth(w: number): Device {
 
 /* ---------- Theme ---------- */
 export const FONTS = ["sans", "serif", "elegant", "display", "rounded", "mono", "condensed", "script"] as const;
-export const FONT_STACKS: Record<(typeof FONTS)[number], string> = {
-  sans: "system-ui, 'Segoe UI', Roboto, sans-serif",
-  serif: "Georgia, 'Times New Roman', serif",
-  elegant: "'Palatino Linotype', Palatino, 'Book Antiqua', serif",
-  display: "'Arial Black', Impact, sans-serif",
-  rounded: "'Trebuchet MS', 'Segoe UI', sans-serif",
-  mono: "ui-monospace, 'Cascadia Mono', Consolas, monospace",
-  condensed: "'Arial Narrow', 'Franklin Gothic Medium', sans-serif",
-  script: "'Brush Script MT', 'Segoe Script', cursive",
+export type FontKey = (typeof FONTS)[number];
+/**
+ * Bundled open-licence (OFL) fonts. The SAME files are loaded in the browser (preview) and registered on the server
+ * (final print render), so what the guest sees is what prints. `bold`/`italic` say which real faces exist: a style a font
+ * does not have is never faked, so preview and print cannot disagree.
+ */
+export const FONT_META: Record<FontKey, { family: string; pkg: string; bold: boolean; italic: boolean; generic: string }> = {
+  sans: { family: "Inter", pkg: "inter", bold: true, italic: true, generic: "system-ui, sans-serif" },
+  serif: { family: "Lora", pkg: "lora", bold: true, italic: true, generic: "Georgia, serif" },
+  elegant: { family: "Playfair Display", pkg: "playfair-display", bold: true, italic: true, generic: "Georgia, serif" },
+  display: { family: "Bebas Neue", pkg: "bebas-neue", bold: false, italic: false, generic: "Impact, sans-serif" },
+  rounded: { family: "Nunito", pkg: "nunito", bold: true, italic: true, generic: "system-ui, sans-serif" },
+  mono: { family: "JetBrains Mono", pkg: "jetbrains-mono", bold: true, italic: true, generic: "ui-monospace, monospace" },
+  condensed: { family: "Oswald", pkg: "oswald", bold: true, italic: false, generic: "'Arial Narrow', sans-serif" },
+  script: { family: "Dancing Script", pkg: "dancing-script", bold: true, italic: false, generic: "cursive" },
 };
+/** Devanagari (Hindi/Marathi) glyphs come from this fallback in both browser and print render. */
+export const FALLBACK_FONT = "Noto Sans Devanagari";
+export const FONT_STACKS: Record<FontKey, string> = Object.fromEntries(
+  FONTS.map((k) => [k, `'${FONT_META[k].family}', '${FALLBACK_FONT}', ${FONT_META[k].generic}`]),
+) as Record<FontKey, string>;
+export const fontStyleFor = (key: FontKey, bold: boolean, italic: boolean) => ({ weight: bold && FONT_META[key].bold ? 700 : 400, italic: italic && FONT_META[key].italic });
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 const assetName = z.string().regex(/^[a-f0-9]{32}\.(png|jpg|webp|svg)$/);
 

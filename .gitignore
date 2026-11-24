@@ -5,3 +5,5 @@ node_modules
 dist
 .next
 storage/
+*.tsbuildinfo
+next-env.d.ts

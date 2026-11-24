@@ -24,3 +24,9 @@ Guest site -> API -> print queue (`print_jobs`) -> Windows Print Agent -> printe
 
 ## Roles
 `super_admin` (global), `event_manager`, `print_operator`, `reporting_viewer` (event-scoped via `user_event_roles`).
+
+## Final image (Phase 7)
+- `apps/api/src/compose.ts` is the only renderer. Photos are placed with the shared `coverLayout` maths (same function the guest editor uses), layers follow `FrameCanvas` geometry, text uses bundled OFL fonts (Inter, Lora, Playfair Display, Bebas Neue, Nunito, JetBrains Mono, Oswald, Dancing Script, Noto Sans Devanagari fallback). The SAME font files are loaded by the browser (`apps/web/app/fonts.ts`) and registered by the server (`apps/api/src/fonts.ts`); a style a font lacks (e.g. italic Oswald) is disabled, never faked.
+- Output is one JPEG (q95, 4:4:4, 300 DPI metadata) in `events/<event>/finals/<random>.jpg`. Guest download, staff view, photo wall and print all read that file.
+- Guests get signed, expiring links (`/api/v1/public/c/:id?exp&sig`, HMAC with `SESSION_SECRET`; mandatory in production). Staff use authenticated per-event routes.
+- Compose is idempotent per guest session (same frame + photos + adjustments + frame version = same picture); a guest trying another frame replaces their unprinted picture, a composition with print jobs is never deleted.

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { validateGuestInput, type PageDefinition } from "@rsp/shared";
+import { MAX_UPLOADS_PER_SESSION, validateGuestInput, type PageDefinition } from "@rsp/shared";
 import { createPool, migrate, type Pool } from "../src/db";
 import { hashPassword } from "../src/auth";
 
@@ -160,7 +160,7 @@ describe("photo upload", () => {
   });
   it("caps uploads per session", async () => {
     const s2 = (await session(tokB)).json().sessionId;
-    for (let i = 0; i < 10; i++) expect((await upload(tokB, s2, await jpeg(1300 + i, 1300, "#" + (100 + i * 11)))).statusCode).toBe(201);
+    for (let i = 0; i < MAX_UPLOADS_PER_SESSION; i++) expect((await upload(tokB, s2, await jpeg(1300 + i, 1300, "#" + (100 + i * 4)))).statusCode).toBe(201);
     expect((await upload(tokB, s2, await jpeg(1400, 1400, "#fa0"))).statusCode).toBe(429);
   });
 });

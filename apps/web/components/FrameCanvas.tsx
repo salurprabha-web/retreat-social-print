@@ -1,6 +1,6 @@
 "use client";
 import type { CSSProperties } from "react";
-import { FONT_STACKS, coverLayout, fillTokens, type EventInfo, type FrameLayer, type PhotoAdjust } from "@rsp/shared";
+import { FONT_STACKS, coverLayout, fillTokens, fontStyleFor, type EventInfo, type FrameLayer, type PhotoAdjust } from "@rsp/shared";
 
 export interface SlotPhoto { url: string; width: number; height: number; adjust?: PhotoAdjust }
 export interface FrameCanvasProps {
@@ -30,7 +30,7 @@ export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, as
             return <div key={l.id} style={{ ...box, background: l.fill, borderRadius: l.shape === "ellipse" ? "50%" : `${l.radius * 100}%/${(l.radius * l.w * W) / Math.max(1, l.h * H) * 100}%` }} />;
           case "text":
             return (
-              <div key={l.id} style={{ ...box, color: l.color, fontFamily: FONT_STACKS[l.fontFamily], fontSize: (H * l.sizePct) / 100, fontWeight: l.bold ? 700 : 400, fontStyle: l.italic ? "italic" : "normal",
+              <div key={l.id} style={{ ...box, color: l.color, fontFamily: FONT_STACKS[l.fontFamily], fontSize: (H * l.sizePct) / 100, fontWeight: fontStyleFor(l.fontFamily, l.bold, l.italic).weight, fontStyle: fontStyleFor(l.fontFamily, l.bold, l.italic).italic ? "italic" : "normal",
                 textAlign: l.align, display: "flex", alignItems: "center", justifyContent: l.align === "left" ? "flex-start" : l.align === "right" ? "flex-end" : "center", lineHeight: 1.1, overflow: "hidden", whiteSpace: "pre-wrap" }}>
                 <span style={{ width: "100%" }}>{fillTokens(l.text, event)}</span>
               </div>
@@ -46,7 +46,9 @@ export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, as
           case "photo": {
             const p = photos[l.slot];
             const bw = l.borderColor && l.borderWidth ? l.borderWidth * W : 0;
-            const style: CSSProperties = { ...box, overflow: "hidden", borderRadius: `${l.radius * 100}%/${(l.radius * l.w * W) / Math.max(1, l.h * H) * 100}%`, border: bw ? `${bw}px solid ${l.borderColor}` : undefined };
+            // The border is drawn ON TOP of the photo (inside the slot) so the photo area never shrinks: the print render does the same.
+            const style: CSSProperties = { ...box, overflow: "hidden", borderRadius: `${l.radius * 100}%/${(l.radius * l.w * W) / Math.max(1, l.h * H) * 100}%` };
+            const ring = bw ? <div style={{ position: "absolute", inset: 0, border: `${bw}px solid ${l.borderColor}`, borderRadius: "inherit", boxSizing: "border-box", pointerEvents: "none" }} /> : null;
             if (p) {
               const a = p.adjust ?? NO_ADJ;
               const L = coverLayout(p.width, p.height, a, (l.h * H) / (l.w * W));
@@ -56,14 +58,15 @@ export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, as
                 <div key={l.id} style={style}>
                   <img src={p.url} alt="" draggable={false} style={{ position: "absolute", left: `${(L.left + L.drawW / 2) * 100}%`, top: `${((L.top + L.drawH / 2) / aspect) * 100}%`,
                     width: `${(quarter ? L.drawH : L.drawW) * 100}%`, maxWidth: "none", transform: `translate(-50%, -50%) rotate(${a.rotate}deg)` }} />
+                  {ring}
                 </div>
               );
             }
             return showPlaceholders ? (
               <div key={l.id} style={{ ...style, background: "repeating-linear-gradient(45deg,#d7dde6,#d7dde6 10px,#e6ebf2 10px,#e6ebf2 20px)", display: "grid", placeItems: "center", color: "#5b6573", fontWeight: 700, fontSize: Math.max(10, W * 0.04) }}>
-                Photo {l.slot}
+                Photo {l.slot}{ring}
               </div>
-            ) : <div key={l.id} style={style} />;
+            ) : <div key={l.id} style={style}>{ring}</div>;
           }
         }
       })}

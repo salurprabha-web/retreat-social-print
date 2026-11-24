@@ -42,10 +42,10 @@ export async function prepare(file: Blob, maxBytes: number): Promise<Blob> {
 
 export interface UploadResult { uploadId: string; width: number; height: number; lowResolution: boolean }
 
-export function uploadPhoto(token: string, sessionId: string, blob: Blob, onProgress: (pct: number) => void): Promise<UploadResult> {
+export function uploadPhoto(token: string, sessionId: string, blob: Blob, onProgress: (pct: number) => void, slot = 1): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
-    x.open("POST", `/api/v1/public/g/${token}/photo`);
+    x.open("POST", `/api/v1/public/g/${token}/photo?slot=${slot}`);
     x.setRequestHeader("content-type", "application/octet-stream");
     x.setRequestHeader("x-guest-session", sessionId);
     x.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };

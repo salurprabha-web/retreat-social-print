@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  FONTS, FRAME_FORMATS, FORMAT_KEYS, PRESETS, PRESET_LABEL, frameSize, newLayer, newLayerId, presetLayers,
+  FONTS, FONT_META, FRAME_FORMATS, FORMAT_KEYS, PRESETS, PRESET_LABEL, frameSize, newLayer, newLayerId, presetLayers,
   type EventInfo, type FrameFormat, type FrameLayer, type LayerType,
 } from "@rsp/shared";
 import { api, type Me } from "../../../../../lib/api";
@@ -299,7 +299,7 @@ function LayerProps({ l, canEdit, patch, upload, assetUrl, onRemove, onDuplicate
         <div className="prow"><label>Font</label><select value={l.fontFamily} onChange={(e) => patch({ fontFamily: e.target.value })}>{FONTS.map((f) => <option key={f}>{f}</option>)}</select></div>
         <div className="prow"><label>Size ({l.sizePct}% of height)</label><input type="range" min={1} max={20} step={0.1} value={l.sizePct} onChange={(e) => patch({ sizePct: Number(e.target.value) })} /></div>
         {col("Colour", l.color, (s) => patch({ color: s }))}
-        <div className="inl"><label className="chk"><input type="checkbox" checked={l.bold} onChange={(e) => patch({ bold: e.target.checked })} />Bold</label><label className="chk"><input type="checkbox" checked={l.italic} onChange={(e) => patch({ italic: e.target.checked })} />Italic</label>
+        <div className="inl"><label className="chk"><input type="checkbox" disabled={!FONT_META[l.fontFamily].bold} checked={l.bold && FONT_META[l.fontFamily].bold} onChange={(e) => patch({ bold: e.target.checked })} />Bold</label><label className="chk"><input type="checkbox" disabled={!FONT_META[l.fontFamily].italic} checked={l.italic && FONT_META[l.fontFamily].italic} onChange={(e) => patch({ italic: e.target.checked })} />Italic</label>
           <select value={l.align} onChange={(e) => patch({ align: e.target.value })} style={{ width: "auto" }} aria-label="Alignment"><option>left</option><option>center</option><option>right</option></select></div>
       </>}
       {l.type === "shape" && <>

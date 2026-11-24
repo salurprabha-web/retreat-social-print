@@ -1,10 +1,16 @@
+const isProd = process.env.NODE_ENV === "production";
+if (isProd && !process.env.SESSION_SECRET) throw new Error("SESSION_SECRET must be set in production (signs photo links)");
+
 export const config = {
   port: Number(process.env.PORT ?? 4100),
   databaseUrl: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5434/rsp",
   sessionTtlHours: Number(process.env.SESSION_TTL_HOURS ?? 12),
   loginRateLimitPerMin: Number(process.env.LOGIN_RATE_LIMIT_PER_MIN ?? 10),
   guestRateLimitPerMin: Number(process.env.GUEST_RATE_LIMIT_PER_MIN ?? 240),
+  composeRateLimitPerMin: Number(process.env.COMPOSE_RATE_LIMIT_PER_MIN ?? 120),
   globalRateLimitPerMin: Number(process.env.GLOBAL_RATE_LIMIT_PER_MIN ?? 1200),
   cookieSecure: process.env.COOKIE_SECURE === "true",
   storageDir: process.env.STORAGE_DIR ?? "./storage",
+  urlSecret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",
+  compositionUrlTtlHours: Number(process.env.COMPOSITION_URL_TTL_HOURS ?? 24),
 };
