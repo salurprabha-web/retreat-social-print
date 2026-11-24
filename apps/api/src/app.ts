@@ -17,6 +17,7 @@ import { frameRoutes } from "./routes/frames";
 import { qrRoutes } from "./routes/qr";
 import { photoRoutes } from "./routes/photos";
 import { printRoutes } from "./routes/print";
+import { agentRoutes } from "./routes/agents";
 import { PrintError } from "./printService";
 
 export async function buildApp(pool: Pool) {
@@ -92,5 +93,6 @@ export async function buildApp(pool: Pool) {
   await qrRoutes(app, pool);
   await photoRoutes(app, pool);
   await printRoutes(app, pool);
+  await agentRoutes(app, pool);
   return app;
 }

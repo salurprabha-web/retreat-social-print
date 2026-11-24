@@ -5,6 +5,7 @@ import { buildApp } from "./app";
 import { hashPassword } from "./auth";
 import { createPool, migrate } from "./db";
 import { config } from "./config";
+import { requeueAllStale } from "./printService";
 
 const dir = new URL("../.pgdata", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const fresh = !fs.existsSync(dir);
@@ -21,6 +22,7 @@ if (email && password && password.length >= 12) {
     ON CONFLICT (lower(email)) DO UPDATE SET password_hash=EXCLUDED.password_hash`, [email, await hashPassword(password)]);
 }
 const app = await buildApp(pool);
+setInterval(() => { requeueAllStale(pool, config.printStaleSeconds).catch(() => {}); }, 30_000).unref();
 await app.listen({ port: config.port, host: "127.0.0.1" });
 console.log(`DEV API on :${config.port} (database in apps/api/.pgdata)`);
 process.on("SIGINT", async () => { await app.close(); await pool.end(); await pg.stop(); process.exit(0); });

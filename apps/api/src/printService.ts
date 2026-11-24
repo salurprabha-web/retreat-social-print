@@ -127,14 +127,17 @@ export async function setPaused(pool: Pool, eventId: string, paused: boolean, us
 /* ---------- Used by the Windows print agent (Phase 11) and by tests that simulate it ---------- */
 
 /** Next approved job, oldest first, unless the queue is paused. SKIP LOCKED: two agents never get the same job. */
-export async function claimNext(pool: Pool, eventId: string, printerId: string | null = null) {
+export async function claimNext(pool: Pool, eventId: string, printerId: string | null = null, paperSize: string | null = null) {
   const job = await withTx(pool, async (tx) => {
     const paused = (await tx.query("SELECT print_paused FROM event_settings WHERE event_id=$1", [eventId])).rows[0]?.print_paused;
     if (paused) return null;
+    // A printer loaded with 2x6 strips only takes jobs made on a 2x6 frame ("any" takes everything).
     const j = (await tx.query(
       `SELECT j.id FROM print_jobs j JOIN final_compositions c ON c.id=j.composition_id AND c.event_id=j.event_id
+         JOIN frames f ON f.id=c.frame_id AND f.event_id=c.event_id
         WHERE j.event_id=$1 AND j.status='approved' AND c.deleted_at IS NULL AND c.moderation<>'rejected'
-        ORDER BY j.approved_at, j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [eventId])).rows[0];
+          AND ($2::text IS NULL OR $2='any' OR f.output_format=$2)
+        ORDER BY j.approved_at, j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [eventId, paperSize])).rows[0];
     if (!j) return null;
     await transition(tx, eventId, j.id, "printing", { printerId, note: "Sent to printer" });
     return (await tx.query("SELECT id,composition_id,copies,attempt FROM print_jobs WHERE id=$1", [j.id])).rows[0];
@@ -164,4 +167,12 @@ export async function cancelJobsForCompositions(pool: Pool, eventId: string, com
     try { await withTx(pool, (tx) => transition(tx, eventId, j.id, "cancelled", { userId, note })); } catch (e) { if (!(e instanceof PrintError)) throw e; }
   }
   if (jobs.length) notifyPrint(eventId);
+}
+
+/** Every event's stuck jobs go back to the queue (run on a timer by the server). Returns how many were requeued. */
+export async function requeueAllStale(pool: Pool, olderThanSeconds: number): Promise<number> {
+  const evs = (await pool.query("SELECT DISTINCT event_id FROM print_jobs WHERE status='printing' AND started_at < now() - make_interval(secs => $1)", [olderThanSeconds])).rows;
+  let n = 0;
+  for (const e of evs) n += await requeueStale(pool, e.event_id, olderThanSeconds);
+  return n;
 }

@@ -19,7 +19,7 @@ export default async function setup() {
   // The suites fire thousands of requests from one address; the dedicated rate-limit tests lower these themselves.
   process.env.GLOBAL_RATE_LIMIT_PER_MIN = "100000000";
   process.env.STATUS_RATE_LIMIT_PER_MIN = "100000000";
-  process.env.LOGIN_RATE_LIMIT_PER_MIN = "100000"; process.env.TEST_DATABASE_URL = `postgres://test:test@localhost:${port}/rsp_test`;
+  process.env.LOGIN_RATE_LIMIT_PER_MIN = "100000"; process.env.AGENT_REGISTER_LIMIT_PER_MIN = "100000"; process.env.TEST_DATABASE_URL = `postgres://test:test@localhost:${port}/rsp_test`;
   return async () => {
     await pg.stop();
     fs.rmSync(dir, { recursive: true, force: true });

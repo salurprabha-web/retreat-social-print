@@ -9,7 +9,8 @@ interface Job {
   createdAt: string; approvedAt: string | null; startedAt: string | null; finishedAt: string | null;
   composition: { id: string; guestCode: string | null; frameName: string; widthPx: number; heightPx: number; moderation: string; createdAt: string; uploadIds: string[] };
 }
-interface Data { queue: { mode: PrintMode; paused: boolean; defaultCopies: number }; counts: Record<PrintStatus, number>; jobs: Job[] }
+interface AgentSummary { id: string; name: string; paired: boolean; enabled: boolean; online: boolean; printers: { name: string; enabled: boolean; status: string; detail: string | null; paperSize: string }[] }
+interface Data { queue: { mode: PrintMode; paused: boolean; defaultCopies: number }; counts: Record<PrintStatus, number>; jobs: Job[]; agents: AgentSummary[] }
 interface Hist { history: { id: number; at: string; from: string | null; to: string; note: string | null; by: string; guestCode: string | null; kind: string }[]; queueEvents: { at: string; action: string; by: string | null; detail: any }[] }
 
 const ago = (iso: string) => { const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)} min ago` : `${Math.floor(s / 3600)} h ago`; };
@@ -121,6 +122,18 @@ function Operator({ me }: { me: Me }) {
         </div>}
       </header>
       {q?.paused && <div className="oppaused" role="status">Printing is paused. Approved pictures wait until you press Resume.</div>}
+      {data && (() => {
+        // The one thing staff must never miss: pictures are being approved but nothing can print them.
+        const live = data.agents.filter((a) => a.online && a.enabled);
+        const ready = live.flatMap((a) => a.printers.filter((p) => p.enabled && (p.status === "ready" || p.status === "busy")));
+        const waiting = (data.counts.approved ?? 0) + (data.counts.printing ?? 0);
+        const problem = !data.agents.length ? "No print computer is set up for this event. Pictures will wait in the queue."
+          : !live.length ? "The print computer is offline. Pictures wait in the queue until it reconnects."
+          : !ready.length ? "No printer is ready: " + (live.flatMap((a) => a.printers.filter((p) => p.enabled).map((p) => `${p.name}: ${p.detail ?? p.status}`)).join("; ") || "turn a printer on under Printers in the event settings.")
+          : null;
+        return problem ? <div className="operrbar" role="alert">⚠ {problem}{waiting ? ` (${waiting} waiting)` : ""}</div>
+          : <div className="muted" style={{ margin: "4px 0" }}>🖨 {ready.map((p) => `${p.name} (${p.paperSize})`).join(", ")} ready</div>;
+      })()}
       {err && <div className="operrbar" role="alert">{err}</div>}
 
       <nav className="optabs" aria-label="Columns">

@@ -14,4 +14,7 @@ export const config = {
   publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, ""),
   urlSecret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",
   compositionUrlTtlHours: Number(process.env.COMPOSITION_URL_TTL_HOURS ?? 24),
+  printStaleSeconds: Number(process.env.PRINT_STALE_SECONDS ?? 300),     // a job "printing" longer than this goes back in the queue
+  agentRateLimitPerMin: Number(process.env.AGENT_RATE_LIMIT_PER_MIN ?? 600),
+  agentRegisterLimitPerMin: Number(process.env.AGENT_REGISTER_LIMIT_PER_MIN ?? 10),
 };

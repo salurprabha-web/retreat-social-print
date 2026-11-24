@@ -7,3 +7,7 @@ dist
 storage/
 *.tsbuildinfo
 next-env.d.ts
+bin/
+obj/
+dist/
+*.user

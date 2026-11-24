@@ -33,8 +33,15 @@ export async function printRoutes(app: FastifyInstance, pool: Pool) {
     const cnt = (await pool.query("SELECT status,count(*)::int n FROM print_jobs WHERE event_id=$1 GROUP BY status", [eventId])).rows;
     const counts = Object.fromEntries(PRINT_STATUSES.map((s) => [s, 0])) as Record<string, number>;
     for (const r of cnt) counts[r.status] = r.n;
+    const devs = (await pool.query("SELECT id,name,last_seen_at,paired_at,enabled FROM devices WHERE event_id=$1 AND kind='print_agent' ORDER BY created_at", [eventId])).rows;
+    const prs = (await pool.query("SELECT device_id,windows_name,enabled,status,detail,paper_size FROM printers WHERE event_id=$1 AND device_id IS NOT NULL ORDER BY windows_name", [eventId])).rows;
+    const agents = devs.map((d) => ({
+      id: d.id, name: d.name, paired: !!d.paired_at, enabled: d.enabled,
+      online: !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 45_000,
+      printers: prs.filter((p) => p.device_id === d.id).map((p) => ({ name: p.windows_name, enabled: p.enabled, status: p.status, detail: p.detail, paperSize: p.paper_size })),
+    }));
     return {
-      queue: await queueState(eventId), counts, serverTime: new Date().toISOString(),
+      queue: await queueState(eventId), counts, serverTime: new Date().toISOString(), agents,
       jobs: rows.map((r) => ({
         id: r.id, status: r.status, kind: r.kind, copies: r.copies, attempt: r.attempt, error: r.error, note: r.note,
         createdAt: r.created_at, approvedAt: r.approved_at, startedAt: r.started_at, finishedAt: r.finished_at,

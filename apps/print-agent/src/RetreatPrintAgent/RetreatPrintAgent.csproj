@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>                       <!-- only for System.Printing (print queue status); no WPF windows are used -->
+    <AssemblyName>RetreatPrintAgent</AssemblyName>
+    <RootNamespace>RetreatPrintAgent</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyTitle>Retreat Social Print Agent</AssemblyTitle>
+    <Company>Retreat Arcade Solutions</Company>
+    <Product>Retreat Social Print</Product>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RetreatPrintAgent.Core\RetreatPrintAgent.Core.csproj" />
+  </ItemGroup>
+</Project>

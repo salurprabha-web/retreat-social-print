@@ -1,0 +1,10 @@
+RETREAT SOCIAL PRINT: PRINT AGENT
+=================================
+1. Install the printer's own Windows driver and print a normal test page from Windows first.
+2. Right-click install.ps1 > "Run with PowerShell" (as administrator). No other software is needed.
+3. Open "Retreat Print Agent" from the Start Menu.
+4. In the admin site: Event > Printers > "Add print computer". Copy the pairing code.
+5. In the agent press "Pair this computer", enter the site address and the code.
+6. Back in the admin site, turn the printer on and choose the paper loaded in it (4x6, 5x7 ...).
+7. In the agent, select the printer and press "Print a test page" to check alignment.
+The agent starts with Windows and keeps running in the tray. Full guide: docs/PRINT_AGENT.md
