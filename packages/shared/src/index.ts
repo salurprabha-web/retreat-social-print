@@ -28,3 +28,4 @@ export * from "./page";
 export * from "./templates";
 export * from "./photo";
 export * from "./frame";
+export * from "./share";

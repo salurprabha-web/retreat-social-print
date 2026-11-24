@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  NO_ADJUST, fillTokens, validateGuestInput,
+  NO_ADJUST, fillTokens, resolveShare, validateGuestInput,
   type Device, type EventInfo, type FrameLayer, type PageDefinition, type PhotoAdjust, type StepId,
 } from "@rsp/shared";
 import { GuestPage } from "../GuestPage";
@@ -9,19 +9,23 @@ import { FrameCanvas, type SlotPhoto } from "../FrameCanvas";
 import { ThemeFrame } from "./ThemeFrame";
 import { PhotoEditor } from "./PhotoEditor";
 import { Webcam } from "./Webcam";
+import { ShareScreen } from "./ShareScreen";
 import { FRIENDLY, PhotoError, prepare, uploadPhoto } from "../../lib/photo";
 
 export interface PublicData {
   definition: PageDefinition; event: EventInfo; logos: { event: boolean; client: boolean };
-  settings: { maxUploadMb: number; requireConsent: boolean };
+  settings: {
+    maxUploadMb: number; requireConsent: boolean;
+    share: ReturnType<typeof resolveShare>; instagramHandle: string | null; suggestedCaption: string | null;
+  };
 }
 interface PubFrame { id: string; name: string; format: string; widthPx: number; heightPx: number; layers: FrameLayer[] }
 interface Held { url: string; blob: Blob; w: number; h: number; uploadId: string; adjust: PhotoAdjust }
 interface Final { id: string; url: string; width: number; height: number }
 type PhotoLayer = Extract<FrameLayer, { type: "photo" }>;
 
-/** Screens that exist so far. Sharing (Phase 8) is skipped until built. */
-const IMPLEMENTED: StepId[] = ["welcome", "details", "capture", "frame", "edit", "preview"];
+/** Every step has a screen now. Share needs a finished picture, so it is skipped when no frame/picture exists. */
+const IMPLEMENTED: StepId[] = ["welcome", "details", "capture", "frame", "edit", "preview", "share"];
 const CHAIN: StepId[] = ["frame", "edit", "preview"];
 type Screen = StepId | "done";
 
@@ -36,7 +40,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   // Enabled steps in the administrator's order. Details (carries consent) sits right before capture; capture always precedes the frame steps.
   const seq: Screen[] = useMemo(() => {
     let s: Screen[] = def.journey.steps.filter((x) => x.enabled && IMPLEMENTED.includes(x.id)).map((x) => x.id);
-    if (!hasFrames) s = s.filter((x) => !CHAIN.includes(x as StepId));
+    if (!hasFrames) s = s.filter((x) => !CHAIN.includes(x as StepId) && x !== "share");
     s = s.filter((x) => x !== "details" && x !== "capture");
     const firstChain = s.findIndex((x) => CHAIN.includes(x as StepId));
     const capAt = firstChain < 0 ? s.length : firstChain;
@@ -327,6 +331,11 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
         </div>
       </div>
     );
+  } else if (screen === "share" && final && session) {
+    body = (
+      <ShareScreen token={token} sessionId={session.id} compositionId={final.id} finalUrl={final.url} data={data} btn={btn} onDone={go}
+        doneLabel={stepInfo("share").buttonLabel} title={fillTokens(stepInfo("share").title, data.event)} instructions={fillTokens(stepInfo("share").instructions, data.event)} />
+    );
   } else {
     body = (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
@@ -336,7 +345,6 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
         {session && <p style={{ margin: 0 }}>Your guest ID: <b style={{ fontSize: "1.4em", letterSpacing: ".1em" }}>{session.code}</b></p>}
         {lowRes && <p style={{ margin: 0, fontSize: ".9em", opacity: .9 }}>Your photo is small, so the print may look soft.</p>}
         {!final && <p style={{ margin: 0, opacity: .85, maxWidth: "28em" }}>Your photo has been saved. This event has no frames available yet.</p>}
-        {final && <p style={{ margin: 0, opacity: .85, maxWidth: "28em" }}>Sharing and printing arrive in the next releases of this event experience.</p>}
         <button type="button" style={btn(false)} onClick={restart}>{stepInfo("success").buttonLabel}</button>
       </div>
     );

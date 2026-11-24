@@ -58,6 +58,9 @@ importers:
       pg:
         specifier: ^8.13.1
         version: 8.23.1
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       sharp:
         specifier: ^0.34.0
         version: 0.34.5
@@ -71,9 +74,15 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
+      '@types/qrcode':
+        specifier: ^1.5.5
+        version: 1.5.6
       embedded-postgres:
         specifier: ^17.2.0-beta.15
         version: 17.2.0-beta.15
+      jsqr:
+        specifier: ^1.4.0
+        version: 1.4.0
       tsx:
         specifier: ^4.19.2
         version: 4.23.15
@@ -1425,6 +1434,9 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
+  jsqr@1.4.0:
+    resolution: {integrity: sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A==}
+
   light-my-request@6.8.1:
     resolution: {integrity: sha512-20biUK0HAIPG9BZOK3/4s8uVAkAoi1+qW55lciHZCR0puTWipBgyMPEUjqXDWLjsZeqfO6DGsuwW5eyfsTGtyg==}
 
@@ -2774,6 +2786,8 @@ snapshots:
       dequal: 2.0.3
 
   json-schema-traverse@1.0.0: {}
+
+  jsqr@1.4.0: {}
 
   light-my-request@6.8.1:
     dependencies:

@@ -82,3 +82,6 @@ input.swatch { width: 44px; height: 32px; padding: 0; } input[type=range] { padd
 .lrow.on { border-color: #3b82f6; background: rgba(59,130,246,.08); } .lname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .lrow button.mini { padding: 2px 6px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.qrcard { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+a.mini.lnk { text-decoration: none; display: inline-block; color: var(--ink); }
+a.mini { text-decoration: none; padding: 6px 10px; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; font-weight: 500; background: transparent; }

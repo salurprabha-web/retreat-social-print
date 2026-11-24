@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash, randomInt } from "node:crypto";
 import sharp from "sharp";
 import { z } from "zod";
-import { MAX_UPLOADS_PER_SESSION, photoAdjustSchema, validateGuestInput, type FrameLayer, type PageDefinition } from "@rsp/shared";
+import { MAX_UPLOADS_PER_SESSION, SHARE_CHANNELS, photoAdjustSchema, resolveShare, validateGuestInput, type FrameLayer, type PageDefinition } from "@rsp/shared";
 import type { Pool } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
@@ -216,6 +216,23 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });
     const r = (await pool.query("SELECT id FROM final_compositions WHERE id=$1 AND session_id=$2 AND event_id=$3 AND deleted_at IS NULL", [cid, g.sessionId, g.pe.id])).rows[0];
     return r ? { url: signCompositionPath(r.id) } : reply.code(404).send({ error: "not_found" });
+  });
+
+  // A share tap is recorded as an ATTEMPT only. Neither the browser nor Instagram tells us whether a post happened, so we never claim it.
+  app.post("/api/v1/public/g/:token/composition/:cid/share", { config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const g = await authGuest(req, reply); if (!g) return;
+    const cid = (req.params as any).cid as string;
+    if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });
+    const { channel } = z.object({ channel: z.enum(SHARE_CHANNELS) }).parse(req.body);
+    const own = (await pool.query("SELECT 1 FROM final_compositions WHERE id=$1 AND session_id=$2 AND event_id=$3 AND deleted_at IS NULL", [cid, g.sessionId, g.pe.id])).rowCount;
+    if (!own) return reply.code(404).send({ error: "not_found" });
+    const settings = resolveShare((await pool.query("SELECT share FROM event_settings WHERE event_id=$1", [g.pe.id])).rows[0]?.share);
+    const key = ({ instagram: "instagram", whatsapp: "whatsapp", native: "native", download: "download", copy_caption: "copyCaption", copy_hashtag: "copyHashtag" } as const)[channel];
+    if (!settings.channels[key]) return reply.code(400).send({ error: "channel_disabled" });
+    const n = (await pool.query("SELECT count(*)::int c FROM share_events WHERE composition_id=$1", [cid])).rows[0].c;
+    if (n >= 100) return reply.code(429).send({ error: "too_many_attempts" });
+    await pool.query("INSERT INTO share_events(event_id,composition_id,channel,session_id) VALUES ($1,$2,$3,$4)", [g.pe.id, cid, channel, g.sessionId]);
+    return reply.code(201).send({ ok: true, outcome: "attempted" });
   });
 
   // Signed, expiring link: lets the browser download/share the image without custom headers. Guessing or editing the link fails.

@@ -11,6 +11,7 @@ export const config = {
   globalRateLimitPerMin: Number(process.env.GLOBAL_RATE_LIMIT_PER_MIN ?? 1200),
   cookieSecure: process.env.COOKIE_SECURE === "true",
   storageDir: process.env.STORAGE_DIR ?? "./storage",
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, ""),
   urlSecret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",
   compositionUrlTtlHours: Number(process.env.COMPOSITION_URL_TTL_HOURS ?? 24),
 };

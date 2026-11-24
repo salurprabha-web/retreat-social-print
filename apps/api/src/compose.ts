@@ -44,7 +44,7 @@ async function renderImage(buf: Buffer, w: number, h: number, fit: "contain" | "
 }
 
 /** Greedy word wrap like CSS `white-space: pre-wrap` (breaks at spaces and newlines only). */
-function wrapLines(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, text: string, maxW: number): string[] {
+export function wrapLines(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, text: string, maxW: number): string[] {
   const out: string[] = [];
   for (const para of text.split("\n")) {
     const words = para.split(/ +/).filter((x) => x.length);

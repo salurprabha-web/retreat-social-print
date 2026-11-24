@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { shareSettingsSchema } from "@rsp/shared";
+import { newQrCode } from "../qrcodes";
 import type { Pool } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
@@ -28,6 +30,7 @@ const settingsSchema = z.object({
   instagramHandle: z.string().trim().max(60).nullable(),
   suggestedCaption: z.string().trim().max(500).nullable(),
   primaryColor: hex,
+  share: shareSettingsSchema.partial(),
 }).partial();
 const patchSchema = createSchema.partial().extend({ settings: settingsSchema.optional() });
 
@@ -45,7 +48,7 @@ function shape(r: any) {
       settings: {
         printMode: r.print_mode, defaultCopies: r.default_copies, maxUploadMb: r.max_upload_mb, retentionDays: r.retention_days,
         requireConsent: r.require_consent, photoWallEnabled: r.photo_wall_enabled, mosaicEnabled: r.mosaic_enabled,
-        instagramHandle: r.instagram_handle, suggestedCaption: r.suggested_caption, branding: r.branding,
+        instagramHandle: r.instagram_handle, suggestedCaption: r.suggested_caption, branding: r.branding, share: r.share ?? {},
       },
     } : {}),
     ...(r.submissions !== undefined ? { submissions: r.submissions } : {}),
@@ -57,6 +60,7 @@ async function createEvent(tx: any, userId: string, v: { name: string; clientNam
     `INSERT INTO events(name,slug,client_name,hashtag,event_date,created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
     [v.name, newSlug(v.name), v.clientName ?? null, v.hashtag ?? null, v.eventDate ?? null, userId])).rows[0].id as string;
   await tx.query("INSERT INTO photo_wall_settings(event_id) VALUES ($1)", [e]);
+  await tx.query("INSERT INTO qr_tracking(event_id,code,label) VALUES ($1,$2,$3)", [e, newQrCode(), "Main QR"]);
   return e;
 }
 
@@ -126,6 +130,7 @@ export async function eventRoutes(app: FastifyInstance, pool: Pool) {
         };
         const sset: string[] = []; const svals: unknown[] = [id];
         for (const [k, col] of Object.entries(cols)) if ((s as any)[k] !== undefined) { svals.push((s as any)[k]); sset.push(`${col}=$${svals.length}`); }
+        if (s.share) { svals.push(JSON.stringify(s.share)); sset.push(`share=$${svals.length}::jsonb`); }
         if (s.primaryColor) { svals.push(JSON.stringify({ primaryColor: s.primaryColor })); sset.push(`branding=branding || $${svals.length}::jsonb`); }
         if (sset.length) await tx.query(`UPDATE event_settings SET ${sset.join(",")}, updated_at=now() WHERE event_id=$1`, svals);
       }

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import { DEFAULT_CAPTION, DEFAULT_LABELS, buildCaption, resolveShare, type ShareSettings } from "@rsp/shared";
 import { api, type Me } from "../../../lib/api";
 import { Shell } from "../../../components/Shell";
 
@@ -8,12 +9,13 @@ interface Settings {
   printMode: string; defaultCopies: number; maxUploadMb: number; retentionDays: number; requireConsent: boolean;
   photoWallEnabled: boolean; mosaicEnabled: boolean; instagramHandle: string | null; suggestedCaption: string | null;
   branding: { primaryColor?: string; clientLogo?: string; eventLogo?: string };
+  share: Partial<ShareSettings>;
 }
 interface Ev {
   id: string; name: string; slug: string; guestToken: string; clientName: string | null; hashtag: string | null;
   eventDate: string | null; status: string; settings: Settings;
 }
-const TABS = ["Overview", "Branding", "Settings", "Guest page", "Frames", "Printing (Phase 10)"];
+const TABS = ["Overview", "Branding", "Settings", "Sharing", "Guest page", "Frames", "QR codes", "Printing (Phase 10)"];
 
 function Body({ me }: { me: Me }) {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +66,7 @@ function Body({ me }: { me: Me }) {
       <a href="/events" className="muted">&larr; All events</a>
       <h1>{ev.name} <span className={"pill " + ev.status}>{ev.status}</span></h1>
       <div className="sub">{ev.clientName ?? "No client"} &middot; {ev.eventDate ?? "No date"} {ev.hashtag && <>&middot; #{ev.hashtag}</>}</div>
-      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => (t === "Guest page" ? (window.location.href = `/events/${id}/builder`) : t === "Frames" ? (window.location.href = `/events/${id}/frames`) : setTab(t))}>{t}</button>)}</div>
+      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => (t === "Guest page" ? (window.location.href = `/events/${id}/builder`) : t === "Frames" ? (window.location.href = `/events/${id}/frames`) : t === "QR codes" ? (window.location.href = `/events/${id}/qr`) : setTab(t))}>{t}</button>)}</div>
       {msg && <div className="ok" role="status">{msg}</div>}{err && <div className="err" role="alert">{err}</div>}
 
       {tab === "Overview" && (
@@ -102,6 +104,7 @@ function Body({ me }: { me: Me }) {
       )}
 
       {tab === "Settings" && <SettingsForm key={ev.id + ev.settings.retentionDays} ev={ev} canEdit={canEdit} onSave={patch} />}
+      {tab === "Sharing" && <SharingForm key={ev.id + JSON.stringify(ev.settings.share) + ev.settings.instagramHandle + ev.settings.suggestedCaption} ev={ev} canEdit={canEdit} onSave={patch} />}
     </>
   );
 }
@@ -122,7 +125,6 @@ function SettingsForm({ ev, canEdit, onSave }: { ev: Ev; canEdit: boolean; onSav
       settings: {
         printMode: f.printMode, defaultCopies: +f.defaultCopies, maxUploadMb: +f.maxUploadMb, retentionDays: +f.retentionDays,
         requireConsent: f.requireConsent, photoWallEnabled: f.photoWallEnabled, mosaicEnabled: f.mosaicEnabled,
-        instagramHandle: f.instagramHandle || null, suggestedCaption: f.suggestedCaption || null,
       },
     });
   }
@@ -140,12 +142,53 @@ function SettingsForm({ ev, canEdit, onSave }: { ev: Ev; canEdit: boolean; onSav
         <label>Default copies (1-10)</label><input type="number" min={1} max={10} value={f.defaultCopies} onChange={(e) => set("defaultCopies", e.target.value)} />
         <label>Max upload size (MB, 1-100)</label><input type="number" min={1} max={100} value={f.maxUploadMb} onChange={(e) => set("maxUploadMb", e.target.value)} />
         <label>Photo retention (days) before automatic deletion</label><input type="number" min={1} max={3650} value={f.retentionDays} onChange={(e) => set("retentionDays", e.target.value)} />
-        <label>Instagram account</label><input value={f.instagramHandle} onChange={(e) => set("instagramHandle", e.target.value)} />
-        <label>Suggested caption</label><input value={f.suggestedCaption} onChange={(e) => set("suggestedCaption", e.target.value)} />
+        <p className="muted">Instagram account, caption and sharing buttons are on the Sharing tab.</p>
         <label className="check"><input type="checkbox" checked={f.requireConsent} onChange={(e) => set("requireConsent", e.target.checked)} /> Require guest consent</label>
         <label className="check"><input type="checkbox" checked={f.photoWallEnabled} onChange={(e) => set("photoWallEnabled", e.target.checked)} /> Live photo wall</label>
         <label className="check"><input type="checkbox" checked={f.mosaicEnabled} onChange={(e) => set("mosaicEnabled", e.target.checked)} /> Photo mosaic</label>
         {canEdit && <button>Save settings</button>}
+      </fieldset>
+    </form>
+  );
+}
+
+function SharingForm({ ev, canEdit, onSave }: { ev: Ev; canEdit: boolean; onSave: (b: object, ok?: string) => void }) {
+  const cur = resolveShare(ev.settings.share);
+  const [f, setF] = useState({
+    instagram: ev.settings.instagramHandle ?? "", caption: ev.settings.suggestedCaption ?? "", tags: cur.sponsorHashtags.join(", "), instructions: cur.instructions,
+    labels: { ...(ev.settings.share?.labels ?? {}) } as Record<string, string>, channels: { ...cur.channels },
+  });
+  const sponsor = f.tags.split(/[ ,]+/).map((t) => t.replace(/^#/, "")).filter(Boolean);
+  const preview = buildCaption(f.caption, ev, { instagram: f.instagram, sponsorHashtags: sponsor });
+  const CH: [keyof typeof cur.channels, string][] = [["instagram", "Share on Instagram"], ["native", "Phone share sheet"], ["whatsapp", "WhatsApp"], ["download", "Download"], ["copyCaption", "Copy caption"], ["copyHashtag", "Copy hashtag"]];
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    onSave({ settings: {
+      instagramHandle: f.instagram.replace(/^@/, "").trim() || null, suggestedCaption: f.caption.trim() || null,
+      share: { instructions: f.instructions, sponsorHashtags: sponsor, labels: Object.fromEntries(Object.entries(f.labels).filter(([, v]) => v.trim())), channels: f.channels },
+    } }, "Sharing settings saved.");
+  }
+  return (
+    <form className="card" onSubmit={submit}>
+      <fieldset disabled={!canEdit} style={{ border: 0, padding: 0, margin: 0 }}>
+        <p className="muted">Guests share from their own phone. Instagram does not allow any app to post for a guest, so the buttons open the share sheet or guide them step by step; every tap is counted as a share <i>attempt</i>, never as a confirmed post.</p>
+        <label>Instagram account (shown as a follow link)</label>
+        <input value={f.instagram} placeholder="retreat.arcade" onChange={(e) => setF({ ...f, instagram: e.target.value })} />
+        <label>Suggested caption ({"{{event.name}} {{event.hashtag}} {{event.date}} {{event.client}} {{event.instagram}}"}; blank = default)</label>
+        <textarea rows={4} maxLength={500} value={f.caption} placeholder={DEFAULT_CAPTION} onChange={(e) => setF({ ...f, caption: e.target.value })} />
+        <label>Sponsor hashtags (up to 5, comma separated)</label>
+        <input value={f.tags} placeholder="Acme, BrandX" onChange={(e) => setF({ ...f, tags: e.target.value })} />
+        <div className="card" style={{ margin: "12px 0", background: "var(--bg)" }}><div className="muted">What guests will see as the caption:</div><div style={{ whiteSpace: "pre-line" }}>{preview}</div></div>
+        <label>Instructions shown on the share screen</label>
+        <textarea rows={3} maxLength={600} value={f.instructions} onChange={(e) => setF({ ...f, instructions: e.target.value })} />
+        <h4>Buttons</h4>
+        {CH.map(([k, name]) => (
+          <div key={k} className="row" style={{ margin: "6px 0" }}>
+            <label className="chk" style={{ minWidth: 190 }}><input type="checkbox" checked={f.channels[k]} onChange={(e) => setF({ ...f, channels: { ...f.channels, [k]: e.target.checked } })} /> {name}</label>
+            <input maxLength={40} placeholder={DEFAULT_LABELS[k]} value={f.labels[k] ?? ""} onChange={(e) => setF({ ...f, labels: { ...f.labels, [k]: e.target.value } })} aria-label={`${name} button text`} />
+          </div>
+        ))}
+        {canEdit && <button>Save sharing settings</button>}
       </fieldset>
     </form>
   );
