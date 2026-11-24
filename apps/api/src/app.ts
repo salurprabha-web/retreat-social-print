@@ -22,6 +22,8 @@ import { wallRoutes } from "./routes/wall";
 import { sponsorRoutes } from "./routes/sponsors";
 import { mosaicRoutes } from "./routes/mosaic";
 import { syncRoutes } from "./routes/sync";
+import { reportRoutes } from "./routes/reports";
+import { ReportError } from "./reports";
 import { storageContext } from "./storage";
 import type { SyncConfig } from "./syncService";
 import { PrintError } from "./printService";
@@ -48,6 +50,7 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
 
   app.setErrorHandler((err: any, _req, reply) => {
     if (err instanceof ZodError) return reply.code(400).send({ error: "validation", issues: err.issues });
+    if (err instanceof ReportError) return reply.code(err.status).send({ error: err.code });
     if (err instanceof PrintError) return reply.code(err.statusCode).send({ error: err.code, ...err.extra });   // expected refusals from the print queue
     if (err.statusCode && err.statusCode < 500) return reply.code(err.statusCode).send({ error: err.message });
     console.error(err);
@@ -112,5 +115,6 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
   await sponsorRoutes(app, pool);
   await mosaicRoutes(app, pool);
   await syncRoutes(app, pool);
+  await reportRoutes(app, pool);
   return app;
 }

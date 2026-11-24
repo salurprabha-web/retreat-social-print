@@ -34,3 +34,4 @@ export * from "./wall";
 export * from "./sponsor";
 export * from "./mosaic";
 export * from "./offline";
+export * from "./reports";

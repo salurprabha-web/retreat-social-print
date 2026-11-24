@@ -21,6 +21,7 @@ export interface SyncTable {
 /** Parents before children. Deleting goes the other way round. */
 export const SYNC_TABLES: readonly SyncTable[] = [
   { name: "guest_sessions", pk: ["id"], nullCols: ["device_id"], files: [] },
+  { name: "frame_selections", pk: ["id"], nullCols: [], files: [] },
   { name: "photo_uploads", pk: ["id"], nullCols: [], files: ["storage_key"] },
   { name: "final_compositions", pk: ["id"], nullCols: ["moderated_by"], files: ["storage_key"] },
   { name: "composition_photos", pk: ["composition_id", "slot"], nullCols: [], files: [] },

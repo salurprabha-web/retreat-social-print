@@ -29,6 +29,7 @@
     "@rsp/shared": "workspace:*",
     "archiver": "^7",
     "fastify": "^5.1.0",
+    "pdfkit": "^0.21.0",
     "pg": "^8.13.1",
     "qrcode": "^1.5.4",
     "sharp": "^0.34.0",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/node": "^22.9.0",
+    "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.11.10",
     "@types/qrcode": "^1.5.5",
     "embedded-postgres": "^17.2.0-beta.15",

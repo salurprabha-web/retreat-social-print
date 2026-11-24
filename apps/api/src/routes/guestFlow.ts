@@ -204,6 +204,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'image/jpeg') RETURNING id,width_px,height_px,bytes`,
           [pe.id, sorted[0].uploadId, frame.id, key, out.width, out.height, createHash("sha256").update(out.buffer).digest("hex"), sessionId, inputHash, out.buffer.length])).rows[0];
         for (const s of sorted) await tx.query("INSERT INTO composition_photos(composition_id,event_id,slot,upload_id,adjust) VALUES ($1,$2,$3,$4,$5)", [r.id, pe.id, s.slot, s.uploadId, JSON.stringify(s.adjust)]);
+        await tx.query("INSERT INTO frame_selections(event_id,session_id,frame_id) VALUES ($1,$2,$3)", [pe.id, sessionId, frame.id]);      // frame popularity report
         return r;
       });
     } catch (e) { await deleteFile(key); throw e; }

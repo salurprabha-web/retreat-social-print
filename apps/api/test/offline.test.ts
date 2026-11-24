@@ -45,7 +45,7 @@ async function startCloud() {
   cloudUrl = `http://127.0.0.1:${(cloud.server.address() as any).port}`;
 }
 const localCfg = (): SyncConfig => ({ ...local.rspSync!, storageDir: LOCAL_STORE });
-const counts = async (pool: Pool, ev = evId) => Object.fromEntries(await Promise.all(["guest_sessions", "photo_uploads", "final_compositions", "composition_photos", "print_jobs", "print_job_events", "qr_scan_events", "share_events", "wall_views"].map(async (t) => [t, (await pool.query(`SELECT count(*)::int n FROM ${t} WHERE event_id=$1`, [ev])).rows[0].n]))) as Record<string, number>;
+const counts = async (pool: Pool, ev = evId) => Object.fromEntries(await Promise.all(["guest_sessions", "photo_uploads", "final_compositions", "composition_photos", "print_jobs", "print_job_events", "qr_scan_events", "share_events", "wall_views", "frame_selections"].map(async (t) => [t, (await pool.query(`SELECT count(*)::int n FROM ${t} WHERE event_id=$1`, [ev])).rows[0].n]))) as Record<string, number>;
 
 /** A guest on the LOCAL server: session, photo, frame, finish. Returns ids. */
 async function localGuest(colour = "#336699") {
