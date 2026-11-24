@@ -182,7 +182,7 @@ export async function guestPageRoutes(app: FastifyInstance, pool: Pool) {
       logos: { event: !!b.eventLogo, client: !!b.clientLogo },
       sponsors: await publicSponsors(pool, pe.id, "guest"),
       settings: {
-        photoWallEnabled: !!st?.photo_wall_enabled, maxUploadMb: st?.max_upload_mb ?? 25, requireConsent: st?.require_consent ?? true,
+        localMode: app.rspMode === "local", photoWallEnabled: !!st?.photo_wall_enabled, maxUploadMb: st?.max_upload_mb ?? 25, requireConsent: st?.require_consent ?? true,
         share: resolveShare(st?.share), instagramHandle: st?.instagram_handle ?? null, suggestedCaption: st?.suggested_caption ?? null,
       },
     };

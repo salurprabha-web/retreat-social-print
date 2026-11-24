@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { api, loadMe, type Me } from "../lib/api";
+import { SyncBar } from "./SyncBar";
 
 export function Shell({ active, children }: { active: "dashboard" | "events"; children: (me: Me) => ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -16,7 +17,7 @@ export function Shell({ active, children }: { active: "dashboard" | "events"; ch
         <a className={"nav" + (active === "events" ? " on" : "")} href="/events">Events</a>
         <button className="ghost" onClick={logout}>Sign out</button>
       </aside>
-      <main className="main">{children(me)}</main>
+      <main className="main"><SyncBar />{children(me)}</main>
     </div>
   );
 }

@@ -16,5 +16,10 @@ export const config = {
   compositionUrlTtlHours: Number(process.env.COMPOSITION_URL_TTL_HOURS ?? 24),
   printStaleSeconds: Number(process.env.PRINT_STALE_SECONDS ?? 300),     // a job "printing" longer than this goes back in the queue
   agentRateLimitPerMin: Number(process.env.AGENT_RATE_LIMIT_PER_MIN ?? 600),
+  // Offline mode: "local" = a venue server that keeps working without internet and pushes its data to the cloud when it can.
+  mode: (process.env.RSP_MODE === "local" ? "local" : "cloud") as "cloud" | "local",
+  cloudUrl: (process.env.CLOUD_URL ?? "").replace(/\/+$/, ""),
+  syncTokens: (process.env.SYNC_TOKENS ?? "").split(",").map((t) => t.trim()).filter(Boolean),
+  syncIntervalSeconds: Number(process.env.SYNC_INTERVAL_SECONDS ?? 20),
   agentRegisterLimitPerMin: Number(process.env.AGENT_REGISTER_LIMIT_PER_MIN ?? 10),
 };

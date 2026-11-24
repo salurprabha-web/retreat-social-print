@@ -19,8 +19,10 @@ interface JobRow { id: string; status: PrintStatus; composition_id: string; copi
 export async function transition(tx: Tx, eventId: string, jobId: string, to: PrintStatus, o: {
   userId?: string | null; note?: string | null; expectFrom?: readonly PrintStatus[]; error?: string | null; printerId?: string | null;
 } = {}): Promise<{ from: PrintStatus; job: JobRow }> {
-  const j = (await tx.query("SELECT id,status,composition_id,copies FROM print_jobs WHERE id=$1 AND event_id=$2 FOR UPDATE", [jobId, eventId])).rows[0] as JobRow | undefined;
+  const j = (await tx.query("SELECT id,status,composition_id,copies,synced_from FROM print_jobs WHERE id=$1 AND event_id=$2 FOR UPDATE", [jobId, eventId])).rows[0] as (JobRow & { synced_from: string | null }) | undefined;
   if (!j) throw new PrintError("not_found", 404);
+  // A job delivered from a local server was handled there. Changing it here could print the picture a second time.
+  if (j.synced_from) throw new PrintError("synced_job_read_only", 409);
   if (o.expectFrom && !o.expectFrom.includes(j.status)) throw new PrintError("invalid_state", 409, { status: j.status });
   if (!canTransition(j.status, to)) throw new PrintError("invalid_transition", 409, { from: j.status, to });
   const sets = ["status=$3", "updated_at=now()"]; const v: unknown[] = [jobId, eventId, to];
@@ -140,7 +142,7 @@ export async function claimNext(pool: Pool, eventId: string, printerId: string |
     const j = (await tx.query(
       `SELECT j.id FROM print_jobs j JOIN final_compositions c ON c.id=j.composition_id AND c.event_id=j.event_id
          JOIN frames f ON f.id=c.frame_id AND f.event_id=c.event_id
-        WHERE j.event_id=$1 AND j.status='approved' AND c.deleted_at IS NULL AND c.moderation<>'rejected'
+        WHERE j.event_id=$1 AND j.synced_from IS NULL AND j.status='approved' AND c.deleted_at IS NULL AND c.moderation<>'rejected'
           AND ($2::text IS NULL OR $2='any' OR f.output_format=$2)
         ORDER BY j.approved_at, j.created_at FOR UPDATE OF j SKIP LOCKED LIMIT 1`, [eventId, paperSize])).rows[0];
     if (!j) return null;
@@ -159,7 +161,7 @@ export async function reportResult(pool: Pool, eventId: string, jobId: string, o
 
 /** Jobs stuck in "printing" (agent crashed or lost connection) go back to the queue instead of hanging forever. */
 export async function requeueStale(pool: Pool, eventId: string, olderThanSeconds: number): Promise<number> {
-  const stale = (await pool.query("SELECT id FROM print_jobs WHERE event_id=$1 AND status='printing' AND started_at < now() - make_interval(secs => $2)", [eventId, olderThanSeconds])).rows;
+  const stale = (await pool.query("SELECT id FROM print_jobs WHERE event_id=$1 AND synced_from IS NULL AND status='printing' AND started_at < now() - make_interval(secs => $2)", [eventId, olderThanSeconds])).rows;
   for (const s of stale) await withTx(pool, (tx) => transition(tx, eventId, s.id, "approved", { expectFrom: ["printing"], note: "Printer did not answer: back in the queue" }));
   if (stale.length) notifyPrint(eventId);
   return stale.length;
@@ -177,7 +179,7 @@ export async function cancelJobsForCompositions(pool: Pool, eventId: string, com
 
 /** Every event's stuck jobs go back to the queue (run on a timer by the server). Returns how many were requeued. */
 export async function requeueAllStale(pool: Pool, olderThanSeconds: number): Promise<number> {
-  const evs = (await pool.query("SELECT DISTINCT event_id FROM print_jobs WHERE status='printing' AND started_at < now() - make_interval(secs => $1)", [olderThanSeconds])).rows;
+  const evs = (await pool.query("SELECT DISTINCT event_id FROM print_jobs WHERE synced_from IS NULL AND status='printing' AND started_at < now() - make_interval(secs => $1)", [olderThanSeconds])).rows;
   let n = 0;
   for (const e of evs) n += await requeueStale(pool, e.event_id, olderThanSeconds);
   return n;

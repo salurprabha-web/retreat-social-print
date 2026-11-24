@@ -2,10 +2,13 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { config } from "./config";
 
 /** Local-disk storage. Keys are random and never derived from user input; the interface is what an S3 backend would implement. */
-const root = () => path.resolve(config.storageDir);
+/** A server may carry its own storage folder (two servers in one process, as in the offline-mode tests). Without it the configured folder is used. */
+export const storageContext = new AsyncLocalStorage<{ root: string }>();
+const root = () => path.resolve(storageContext.getStore()?.root ?? config.storageDir);
 
 function resolveKey(key: string): string {
   const p = path.resolve(root(), key);
@@ -63,4 +66,9 @@ export async function writeStable(key: string, data: Buffer): Promise<void> {
 /** Names of the files directly inside a storage folder (empty when it does not exist). */
 export async function listFiles(prefix: string): Promise<string[]> {
   try { return (await fs.readdir(resolveKey(prefix), { withFileTypes: true })).filter((d) => d.isFile()).map((d) => d.name); } catch { return []; }
+}
+
+/** Size of a stored file, or null when it is not there. */
+export async function statFile(key: string): Promise<number | null> {
+  try { return (await fs.stat(resolveKey(key))).size; } catch { return null; }
 }

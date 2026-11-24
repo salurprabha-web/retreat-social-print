@@ -16,7 +16,7 @@ import { FRIENDLY, PhotoError, prepare, uploadPhoto } from "../../lib/photo";
 export interface PublicData {
   definition: PageDefinition; event: EventInfo; logos: { event: boolean; client: boolean }; sponsors?: PubSponsor[];
   settings: {
-    maxUploadMb: number; requireConsent: boolean; photoWallEnabled?: boolean;
+    maxUploadMb: number; requireConsent: boolean; photoWallEnabled?: boolean; localMode?: boolean;
     share: ReturnType<typeof resolveShare>; instagramHandle: string | null; suggestedCaption: string | null;
   };
 }

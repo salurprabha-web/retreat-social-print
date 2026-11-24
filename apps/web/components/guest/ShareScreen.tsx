@@ -110,6 +110,7 @@ export function ShareScreen({ token, sessionId, compositionId, finalUrl, data, b
       </details>
       {handle && <p style={{ margin: 0 }}>Follow <a style={{ color: "inherit", fontWeight: 700 }} href={`https://instagram.com/${handle}`} target="_blank" rel="noopener noreferrer">@{handle}</a></p>}
       {C.whatsapp && <p style={{ margin: 0, fontSize: ".8em", opacity: .8 }}>WhatsApp shares a link that works for 24 hours.</p>}
+      {data.settings.localMode && <p style={{ margin: 0, fontSize: ".8em", opacity: .85, maxWidth: "28em" }}>Sharing to Instagram or WhatsApp needs an internet connection and may not work on this event&apos;s Wi-Fi. You can download your photo now and share it later.</p>}
       {toast && <p role="status" style={{ margin: 0, background: "rgba(0,0,0,.65)", color: "#fff", padding: "8px 14px", borderRadius: 8 }}>{toast}</p>}
       <button type="button" style={btn()} onClick={onDone}>{doneLabel}</button>
 

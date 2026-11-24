@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { MODE_LABEL, PRINT_MODES, STATUS_LABEL, type PrintMode, type PrintStatus } from "@rsp/shared";
 import { api, loadMe, type Me } from "../../../lib/api";
+import { SyncBar } from "../../../components/SyncBar";
 
 interface Job {
   id: string; status: PrintStatus; kind: "print" | "reprint"; copies: number; attempt: number; error: string | null; note: string | null;
@@ -111,6 +112,7 @@ function Operator({ me }: { me: Me }) {
   const needsCount = c ? c.pending + c.reprint_requested + c.received : 0;
   return (
     <div className="op">
+      <div style={{ padding: "10px 14px 0" }}><SyncBar /></div>
       <header className="ophead">
         <div><a href={`/events/${id}`} className="opback">&larr; Event</a><h1>{eventName || "Printing"}</h1></div>
         <div className={"oplive " + live}>{live === "live" ? "● Live" : live === "offline" ? "● Offline" : "● Connecting…"}</div>

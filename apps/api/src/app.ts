@@ -21,10 +21,21 @@ import { agentRoutes } from "./routes/agents";
 import { wallRoutes } from "./routes/wall";
 import { sponsorRoutes } from "./routes/sponsors";
 import { mosaicRoutes } from "./routes/mosaic";
+import { syncRoutes } from "./routes/sync";
+import { storageContext } from "./storage";
+import type { SyncConfig } from "./syncService";
 import { PrintError } from "./printService";
 
-export async function buildApp(pool: Pool) {
+export type RspMode = "cloud" | "local";
+declare module "fastify" { interface FastifyInstance { rspMode: RspMode; rspStorageDir: string | null; rspSync: SyncConfig | null } }
+
+/** `storageDir` and `mode` let one process host several servers (offline-mode tests); normally both come from the environment. */
+export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: RspMode; sync?: SyncConfig | null } = {}) {
   const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
+  app.decorate("rspMode", opts.mode ?? config.mode);
+  app.decorate("rspStorageDir", opts.storageDir ?? null);
+  app.decorate("rspSync", opts.sync !== undefined ? opts.sync : (config.cloudUrl && config.syncTokens.length ? { cloudUrl: config.cloudUrl, tokens: config.syncTokens } : null));
+  if (opts.storageDir) app.addHook("onRequest", (_req, _reply, done) => { storageContext.run({ root: opts.storageDir! }, done); });
   await app.register(cookie);
   await app.register(rateLimit, { global: true, max: () => config.globalRateLimitPerMin, timeWindow: "1 minute" });
 
@@ -100,5 +111,6 @@ export async function buildApp(pool: Pool) {
   await wallRoutes(app, pool);
   await sponsorRoutes(app, pool);
   await mosaicRoutes(app, pool);
+  await syncRoutes(app, pool);
   return app;
 }
