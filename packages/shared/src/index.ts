@@ -32,3 +32,4 @@ export * from "./share";
 export * from "./print";
 export * from "./wall";
 export * from "./sponsor";
+export * from "./mosaic";

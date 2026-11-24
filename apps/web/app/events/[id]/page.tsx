@@ -15,7 +15,7 @@ interface Ev {
   id: string; name: string; slug: string; guestToken: string; clientName: string | null; hashtag: string | null;
   eventDate: string | null; status: string; settings: Settings;
 }
-const TABS = ["Overview", "Branding", "Settings", "Sharing", "Guest page", "Frames", "Photos", "QR codes", "Photo wall", "Sponsors", "Printers", "Printing"];
+const TABS = ["Overview", "Branding", "Settings", "Sharing", "Guest page", "Frames", "Photos", "QR codes", "Photo wall", "Mosaic", "Sponsors", "Printers", "Printing"];
 
 function Body({ me }: { me: Me }) {
   const { id } = useParams<{ id: string }>();
@@ -66,7 +66,7 @@ function Body({ me }: { me: Me }) {
       <a href="/events" className="muted">&larr; All events</a>
       <h1>{ev.name} <span className={"pill " + ev.status}>{ev.status}</span></h1>
       <div className="sub">{ev.clientName ?? "No client"} &middot; {ev.eventDate ?? "No date"} {ev.hashtag && <>&middot; #{ev.hashtag}</>}</div>
-      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => (t === "Guest page" ? (window.location.href = `/events/${id}/builder`) : t === "Frames" ? (window.location.href = `/events/${id}/frames`) : t === "Printers" ? (window.location.href = `/events/${id}/printers`) : t === "Printing" ? (window.location.href = `/print/${id}`) : t === "Photos" ? (window.location.href = `/events/${id}/photos`) : t === "QR codes" ? (window.location.href = `/events/${id}/qr`) : t === "Photo wall" ? (window.location.href = `/events/${id}/wall`) : t === "Sponsors" ? (window.location.href = `/events/${id}/sponsors`) : setTab(t))}>{t}</button>)}</div>
+      <div className="tabs">{TABS.map((t) => <button key={t} className={"tab" + (tab === t ? " on" : "")} disabled={t.includes("Phase")} onClick={() => (t === "Guest page" ? (window.location.href = `/events/${id}/builder`) : t === "Frames" ? (window.location.href = `/events/${id}/frames`) : t === "Printers" ? (window.location.href = `/events/${id}/printers`) : t === "Printing" ? (window.location.href = `/print/${id}`) : t === "Photos" ? (window.location.href = `/events/${id}/photos`) : t === "QR codes" ? (window.location.href = `/events/${id}/qr`) : t === "Photo wall" ? (window.location.href = `/events/${id}/wall`) : t === "Mosaic" ? (window.location.href = `/events/${id}/mosaic`) : t === "Sponsors" ? (window.location.href = `/events/${id}/sponsors`) : setTab(t))}>{t}</button>)}</div>
       {msg && <div className="ok" role="status">{msg}</div>}{err && <div className="err" role="alert">{err}</div>}
 
       {tab === "Overview" && (

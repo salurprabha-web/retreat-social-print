@@ -17,7 +17,7 @@ const TOKEN = /^[0-9a-f]{24}$/;
 const MAX_ON_WALL = 500;
 
 /** A picture may appear on the wall only when ALL of these hold. One definition, used by the list, the image route and the stats. */
-const ELIGIBLE = (modRequired: string) => `
+export const ELIGIBLE = (modRequired: string) => `
   c.event_id=$1 AND c.deleted_at IS NULL AND c.finalized_at IS NOT NULL AND c.show_on_wall
   AND c.moderation<>'rejected' AND (NOT ${modRequired} OR c.moderation='approved') AND NOT s.wall_opt_out`;
 

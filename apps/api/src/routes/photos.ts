@@ -9,6 +9,7 @@ import { can, requirePermission } from "../auth";
 import { deleteFile, getFile, putFile, streamFile } from "../storage";
 import { notifyWall } from "../wallBus";
 import { wallImageKeys } from "./wall";
+import { mosaicTileKey } from "../mosaicService";
 import { cancelJobsForCompositions } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -134,7 +135,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       `DELETE FROM photo_uploads u WHERE u.id = ANY($1) AND u.event_id=$2
           AND NOT EXISTS (SELECT 1 FROM composition_photos cp WHERE cp.upload_id=u.id)
           AND NOT EXISTS (SELECT 1 FROM final_compositions f WHERE f.upload_id=u.id) RETURNING id,storage_key`, [ups, eventId])).rows;
-    for (const c of comps) { keys.push(c.storage_key, ...wallImageKeys(eventId, c.id)); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${s}.jpg`); }
+    for (const c of comps) { keys.push(c.storage_key, mosaicTileKey(eventId, c.id), ...wallImageKeys(eventId, c.id)); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${s}.jpg`); }
     for (const o of orphan) { keys.push(o.storage_key); for (const s of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/u-${o.id}-${s}.jpg`); }
     return keys;
   }
@@ -203,7 +204,7 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     const counts = await withTx(pool, async (tx) => {
       const comps = (await tx.query("SELECT id,storage_key FROM final_compositions WHERE session_id=$1 AND event_id=$2", [s.id, eventId])).rows;
       const ups = (await tx.query("SELECT id,storage_key FROM photo_uploads WHERE session_id=$1 AND event_id=$2", [s.id, eventId])).rows;
-      for (const c of comps) { keys.push(c.storage_key, ...wallImageKeys(eventId, c.id)); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${z}.jpg`); }
+      for (const c of comps) { keys.push(c.storage_key, mosaicTileKey(eventId, c.id), ...wallImageKeys(eventId, c.id)); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/c-${c.id}-${z}.jpg`); }
       for (const u of ups) { keys.push(u.storage_key); for (const z of THUMB_SIZES) keys.push(`events/${eventId}/thumbs/u-${u.id}-${z}.jpg`); }
       await tx.query("DELETE FROM guest_sessions WHERE id=$1 AND event_id=$2", [s.id, eventId]);   // cascades uploads, pictures, shares and print jobs
       await audit(tx, req.user!.id, "guest_data_delete", { eventId, entity: "guest", entityId: code, detail: { pictures: comps.length, originals: ups.length }, ip: req.ip });

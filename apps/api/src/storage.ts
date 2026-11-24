@@ -59,3 +59,8 @@ export async function writeStable(key: string, data: Buffer): Promise<void> {
   await fs.mkdir(path.dirname(p), { recursive: true });
   await fs.writeFile(p, data);
 }
+
+/** Names of the files directly inside a storage folder (empty when it does not exist). */
+export async function listFiles(prefix: string): Promise<string[]> {
+  try { return (await fs.readdir(resolveKey(prefix), { withFileTypes: true })).filter((d) => d.isFile()).map((d) => d.name); } catch { return []; }
+}
