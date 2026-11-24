@@ -10,6 +10,7 @@ import {
   COOKIE_NAME, LOCK_MINUTES, MAX_FAILED_LOGINS, createSession, destroySession, loadUser, requireUser, verifyPassword,
 } from "./auth";
 import { dashboardRoutes } from "./routes/dashboard";
+import { eventRoutes } from "./routes/events";
 
 export async function buildApp(pool: Pool) {
   const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
@@ -76,5 +77,6 @@ export async function buildApp(pool: Pool) {
   });
 
   await dashboardRoutes(app, pool);
+  await eventRoutes(app, pool);
   return app;
 }

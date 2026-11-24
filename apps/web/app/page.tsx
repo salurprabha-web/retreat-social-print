@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api, loadMe, type Me } from "../lib/api";
+import { api } from "../lib/api";
+import { Shell } from "../components/Shell";
 
 interface Overview {
   totalEvents: number; activeEvents: number; totalSubmissions: number; photosPending: number; photosApproved: number;
@@ -14,40 +15,26 @@ const CARDS: [keyof Overview, string, boolean?][] = [
   ["activeDevices", "Active devices"],
 ];
 
-export default function Dashboard() {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
+function Body({ name, role }: { name: string; role: string }) {
   const [data, setData] = useState<Overview | null>(null);
   const [err, setErr] = useState("");
-  useEffect(() => {
-    loadMe().then(async (u) => {
-      setMe(u);
-      if (!u) { window.location.href = "/login"; return; }
-      try { setData(await api<Overview>("/api/v1/dashboard/overview")); } catch (x: any) { setErr(x.message); }
-    });
-  }, []);
-  async function logout() { await api("/api/v1/auth/logout", { method: "POST" }); window.location.href = "/login"; }
-  if (!me) return null;
+  useEffect(() => { api<Overview>("/api/v1/dashboard/overview").then(setData).catch((x) => setErr(x.message)); }, []);
   return (
-    <div className="shell">
-      <aside className="side">
-        <div className="brand">RETREAT SOCIAL PRINT</div>
-        <div className="tag">CAPTURE. CUSTOMIZE. SHARE. PRINT.</div>
-        <a className="nav on" href="/">Dashboard</a>
-        <a className="nav" href="#" aria-disabled title="Phase 3">Events (Phase 3)</a>
-        <button className="ghost" onClick={logout}>Sign out</button>
-      </aside>
-      <main className="main">
-        <h1>Dashboard</h1>
-        <div className="sub">Signed in as {me.name} ({me.globalRole.replace("_", " ")})</div>
-        {err && <div className="err">{err}</div>}
-        <div className="grid">
-          {data && CARDS.map(([k, label, bad]) => (
-            <div key={k} className={"card" + (bad && data[k] > 0 ? " bad" : "")}>
-              <div className="n">{data[k]}</div><div className="l">{label}</div>
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
+    <>
+      <h1>Dashboard</h1>
+      <div className="sub">Signed in as {name} ({role.replace("_", " ")})</div>
+      {err && <div className="err">{err}</div>}
+      <div className="grid">
+        {data && CARDS.map(([k, label, bad]) => (
+          <div key={k} className={"card" + (bad && data[k] > 0 ? " bad" : "")}>
+            <div className="n">{data[k]}</div><div className="l">{label}</div>
+          </div>
+        ))}
+      </div>
+    </>
   );
+}
+
+export default function Dashboard() {
+  return <Shell active="dashboard">{(me) => <Body name={me.name} role={me.globalRole} />}</Shell>;
 }
