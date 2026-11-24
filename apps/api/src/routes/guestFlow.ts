@@ -247,16 +247,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     return reply.send(await getFile(c.storage_key));
   });
 
-  // Staff of THIS event: list and open the final images (the operator dashboard builds on this in Phase 10).
-  app.get("/api/v1/events/:eventId/compositions", { preHandler: requirePermission(pool, "print:operate", { eventParam: "eventId" }) }, async (req) => {
-    const eventId = (req.params as any).eventId as string;
-    const rows = (await pool.query(
-      `SELECT c.id,c.width_px,c.height_px,c.bytes,c.moderation,c.created_at,s.guest_code,f.name AS frame_name
-         FROM final_compositions c LEFT JOIN guest_sessions s ON s.id=c.session_id AND s.event_id=c.event_id
-         JOIN frames f ON f.id=c.frame_id AND f.event_id=c.event_id
-        WHERE c.event_id=$1 AND c.deleted_at IS NULL ORDER BY c.created_at DESC LIMIT 200`, [eventId])).rows;
-    return { compositions: rows.map((r) => ({ id: r.id, guestCode: r.guest_code, frameName: r.frame_name, widthPx: r.width_px, heightPx: r.height_px, bytes: Number(r.bytes), moderation: r.moderation, createdAt: r.created_at })) };
-  });
+  // Staff list/detail/moderation live in routes/photos.ts. The raw image routes stay here beside the originals.
   app.get("/api/v1/events/:eventId/compositions/:cid/image", { preHandler: requirePermission(pool, "print:operate", { eventParam: "eventId" }) }, async (req, reply) => {
     const { eventId, cid } = req.params as { eventId: string; cid: string };
     if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });

@@ -15,6 +15,7 @@ import { guestPageRoutes } from "./routes/guestPage";
 import { guestFlowRoutes } from "./routes/guestFlow";
 import { frameRoutes } from "./routes/frames";
 import { qrRoutes } from "./routes/qr";
+import { photoRoutes } from "./routes/photos";
 
 export async function buildApp(pool: Pool) {
   const app = Fastify({ logger: false, trustProxy: true, forceCloseConnections: true, bodyLimit: 256 * 1024 });
@@ -86,5 +87,6 @@ export async function buildApp(pool: Pool) {
   await guestFlowRoutes(app, pool);
   await frameRoutes(app, pool);
   await qrRoutes(app, pool);
+  await photoRoutes(app, pool);
   return app;
 }

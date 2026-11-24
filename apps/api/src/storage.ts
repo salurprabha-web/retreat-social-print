@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { config } from "./config";
@@ -47,4 +48,14 @@ export function svgIsSafe(svg: string): boolean {
   }
   if (/url\(\s*["']?(?!#)/.test(s)) return false;
   return true;
+}
+
+/** Read a stored file as a stream (large exports must not be held in memory). */
+export const streamFile = (key: string) => createReadStream(resolveKey(key));
+
+/** Write a file under a caller-chosen (stable) key, e.g. a cached thumbnail. Never used for guest-supplied names. */
+export async function writeStable(key: string, data: Buffer): Promise<void> {
+  const p = resolveKey(key);
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, data);
 }
