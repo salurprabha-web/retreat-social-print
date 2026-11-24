@@ -1,0 +1,14 @@
+{
+  "name": "retreat-social-print",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "migrate": "pnpm --filter @rsp/api migrate",
+    "seed:admin": "pnpm --filter @rsp/api seed:admin",
+    "dev:api": "pnpm --filter @rsp/api dev"
+  },
+  "pnpm": { "onlyBuiltDependencies": ["embedded-postgres", "esbuild", "@node-rs/argon2", "sharp"] }
+}
