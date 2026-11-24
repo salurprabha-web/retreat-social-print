@@ -15,7 +15,7 @@ export interface ComposeInput {
   widthPx: number; heightPx: number; layers: FrameLayer[]; event: EventInfo;
   photos: Map<number, SlotImage>;
   asset(name: string): Promise<Buffer | null>;
-  logo(kind: "event" | "client"): Promise<Buffer | null>;
+  logo(kind: "event" | "client" | "sponsor"): Promise<Buffer | null>;
 }
 type Raw = { data: Buffer; width: number; height: number };
 

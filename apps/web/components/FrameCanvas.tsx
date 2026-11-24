@@ -8,6 +8,7 @@ export interface FrameCanvasProps {
   displayWidth: number;                                   // CSS px the frame is drawn at
   assetUrl: (name: string) => string;
   logoUrl: (kind: "event" | "client") => string | null;
+  sponsorLogo?: string | null;                    // logo of the frame's sponsor, for layers set to "sponsor"
   photos?: Record<number, SlotPhoto>;                     // by slot number; missing = placeholder
   showPlaceholders?: boolean;                             // false: empty slots render blank (final look without a photo)
 }
@@ -15,7 +16,7 @@ export interface FrameCanvasProps {
 const NO_ADJ: PhotoAdjust = { rotate: 0, zoom: 1, offsetX: 0, offsetY: 0 };
 
 /** Draws a frame exactly as it will be composed: same layer order and fractions; sized by displayWidth. */
-export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, assetUrl, logoUrl, photos = {}, showPlaceholders = true }: FrameCanvasProps) {
+export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, assetUrl, logoUrl, sponsorLogo = null, photos = {}, showPlaceholders = true }: FrameCanvasProps) {
   const W = displayWidth, H = (displayWidth * heightPx) / widthPx;
   return (
     <div style={{ position: "relative", width: W, height: H, overflow: "hidden", background: "#fff", flex: "none" }}>
@@ -39,9 +40,9 @@ export function FrameCanvas({ widthPx, heightPx, layers, event, displayWidth, as
             return l.src ? <img key={l.id} src={assetUrl(l.src)} alt="" draggable={false} style={{ ...box, objectFit: l.fit === "stretch" ? "fill" : l.fit }} />
               : <div key={l.id} style={{ ...box, border: "1px dashed #888", color: "#888", fontSize: 11, display: "grid", placeItems: "center" }}>Image</div>;
           case "logo": {
-            const u = logoUrl(l.which);
+            const u = l.which === "sponsor" ? sponsorLogo : logoUrl(l.which);
             return u ? <img key={l.id} src={u} alt="" draggable={false} style={{ ...box, objectFit: "contain" }} />
-              : <div key={l.id} style={{ ...box, border: "1px dashed #888", color: "#888", fontSize: 11, display: "grid", placeItems: "center" }}>{l.which} logo</div>;
+              : <div key={l.id} style={{ ...box, border: "1px dashed #888", color: "#888", fontSize: 11, display: "grid", placeItems: "center" }}>{l.which === "sponsor" ? "sponsor logo (none uploaded)" : `${l.which} logo`}</div>;
           }
           case "photo": {
             const p = photos[l.slot];

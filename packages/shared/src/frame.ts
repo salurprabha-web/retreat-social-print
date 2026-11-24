@@ -38,7 +38,7 @@ export const layerSchema = z.discriminatedUnion("type", [
   z.object({ ...geo, type: z.literal("image"), src: asset.nullable(), fit: z.enum(["contain", "cover", "stretch"]) }),
   z.object({ ...geo, type: z.literal("text"), text: z.string().max(200), color, fontFamily: z.enum(FONTS), sizePct: z.number().min(0.5).max(40), bold: z.boolean(), italic: z.boolean(), align: z.enum(["left", "center", "right"]) }),
   z.object({ ...geo, type: z.literal("shape"), shape: z.enum(["rect", "ellipse"]), fill: color, radius: z.number().min(0).max(0.5) }),
-  z.object({ ...geo, type: z.literal("logo"), which: z.enum(["event", "client"]) }),
+  z.object({ ...geo, type: z.literal("logo"), which: z.enum(["event", "client", "sponsor"]) }),
 ]);
 export type FrameLayer = z.infer<typeof layerSchema>;
 export type LayerType = FrameLayer["type"];
@@ -50,6 +50,7 @@ export const frameInputSchema = z.object({
   customWidthIn: z.number().min(1).max(12).optional(),
   customHeightIn: z.number().min(1).max(12).optional(),
   active: z.boolean().default(true),
+  sponsorId: z.string().uuid().nullable().optional(),     // frame belongs to a sponsor (its logo layer and hashtag)
   layers: z.array(layerSchema).max(60),
 }).superRefine((f, ctx) => {
   if (f.format === "custom" && (!f.customWidthIn || !f.customHeightIn)) ctx.addIssue({ code: "custom", message: "custom size needs width and height", path: ["customWidthIn"] });

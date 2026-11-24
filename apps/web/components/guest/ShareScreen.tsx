@@ -18,14 +18,16 @@ const isMobile = () => typeof navigator !== "undefined" && /Android|iPhone|iPad|
  *  2. otherwise: save the picture, copy the caption, try to open the Instagram app, and show a short guide.
  * Every tap is logged as an ATTEMPT only.
  */
-export function ShareScreen({ token, sessionId, compositionId, finalUrl, data, btn, onDone, doneLabel, title, instructions }: {
+export function ShareScreen({ token, sessionId, compositionId, finalUrl, data, btn, onDone, doneLabel, title, instructions, sponsorTags = [] }: {
   token: string; sessionId: string; compositionId: string; finalUrl: string; data: PublicData; btn: (primary?: boolean) => CSSProperties;
-  onDone: () => void; doneLabel: string; title: string; instructions: string;
+  onDone: () => void; doneLabel: string; title: string; instructions: string; sponsorTags?: string[];
 }) {
   const { share, instagramHandle, suggestedCaption } = data.settings;
   const ev: EventInfo = data.event;
-  const caption = useMemo(() => buildCaption(suggestedCaption, ev, { instagram: instagramHandle, sponsorHashtags: share.sponsorHashtags }), [suggestedCaption, ev, instagramHandle, share.sponsorHashtags]);
-  const tags = useMemo(() => hashtagLine(ev, share.sponsorHashtags), [ev, share.sponsorHashtags]);
+  // Event-wide hashtags from the Sharing tab, then the sponsors' own (a sponsor with frames only tags pictures made in its frames).
+  const allTags = useMemo(() => [...share.sponsorHashtags, ...sponsorTags.filter((t) => !share.sponsorHashtags.some((x) => x.toLowerCase() === t.toLowerCase()))].slice(0, 8), [share.sponsorHashtags, sponsorTags]);
+  const caption = useMemo(() => buildCaption(suggestedCaption, ev, { instagram: instagramHandle, sponsorHashtags: allTags }), [suggestedCaption, ev, instagramHandle, allTags]);
+  const tags = useMemo(() => hashtagLine(ev, allTags), [ev, allTags]);
   const [file, setFile] = useState<File | null>(null);
   const [toast, setToast] = useState(""); const [guide, setGuide] = useState(false);
   const [copied, setCopied] = useState<boolean | null>(null);   // did the caption really reach the clipboard? (never assume)

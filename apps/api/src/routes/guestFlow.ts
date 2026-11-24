@@ -150,7 +150,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
       slots: z.array(z.object({ slot: z.number().int().min(1).max(8), uploadId: z.string().uuid(), adjust: photoAdjustSchema })).min(1).max(8),
     }).parse(req.body);
 
-    const frame = (await pool.query("SELECT id,width_px,height_px,updated_at FROM frames WHERE id=$1 AND event_id=$2 AND active", [body.frameId, pe.id])).rows[0];
+    const frame = (await pool.query("SELECT id,width_px,height_px,updated_at,sponsor_id FROM frames WHERE id=$1 AND event_id=$2 AND active", [body.frameId, pe.id])).rows[0];
     if (!frame) return reply.code(404).send({ error: "frame_not_found" });
     const layers = (await pool.query("SELECT props FROM frame_layers WHERE frame_id=$1 AND event_id=$2 ORDER BY z_index", [frame.id, pe.id])).rows.map((r) => r.props as FrameLayer);
     const need = layers.filter((l) => l.type === "photo").map((l: any) => l.slot as number).sort((a, b) => a - b);
@@ -163,7 +163,9 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (ids.some((i) => !byId.has(i))) return reply.code(404).send({ error: "photo_not_found" });
 
     const sorted = [...body.slots].sort((a, b) => a.slot - b.slot);
-    const inputHash = createHash("sha256").update(JSON.stringify({ f: frame.id, u: new Date(frame.updated_at).toISOString(), s: sorted })).digest("hex");
+    // The sponsor logo is part of the picture, so a changed or switched-off sponsor must not hand back an older composition.
+    const sponsor = frame.sponsor_id ? (await pool.query("SELECT logo_asset FROM sponsors WHERE id=$1 AND event_id=$2 AND active", [frame.sponsor_id, pe.id])).rows[0] ?? null : null;
+    const inputHash = createHash("sha256").update(JSON.stringify({ f: frame.id, u: new Date(frame.updated_at).toISOString(), s: sorted, sp: sponsor?.logo_asset ?? null })).digest("hex");
     const existing = (await pool.query("SELECT id,width_px,height_px,bytes FROM final_compositions WHERE session_id=$1 AND input_hash=$2 AND deleted_at IS NULL", [sessionId, inputHash])).rows[0];
     const reply201 = (r: any) => ({ compositionId: r.id, url: signCompositionPath(r.id), width: r.width_px, height: r.height_px, bytes: Number(r.bytes) });
     if (existing) return reply.code(200).send({ ...reply201(existing), duplicate: true });
@@ -181,7 +183,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
         widthPx: frame.width_px, heightPx: frame.height_px, layers, photos,
         event: { name: info.name, hashtag: info.hashtag, eventDate: info.event_date ? new Date(info.event_date).toISOString().slice(0, 10) : null, clientName: info.client_name },
         asset: (name) => safeRead(`events/${pe.id}/frames/${name}`),
-        logo: (kind) => (branding[kind === "client" ? "clientLogo" : "eventLogo"] ? safeRead(branding[kind === "client" ? "clientLogo" : "eventLogo"]) : Promise.resolve(null)),
+        logo: (kind) => kind === "sponsor" ? (sponsor?.logo_asset ? safeRead(sponsor.logo_asset) : Promise.resolve(null)) : (branding[kind === "client" ? "clientLogo" : "eventLogo"] ? safeRead(branding[kind === "client" ? "clientLogo" : "eventLogo"]) : Promise.resolve(null)),
       });
     } catch (e) { req.log?.error?.(e); return reply.code(500).send({ error: "compose_failed" }); }
 

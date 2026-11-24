@@ -9,9 +9,10 @@ import { api, type Me } from "../../../../../lib/api";
 import { Shell } from "../../../../../components/Shell";
 import { FrameCanvas, SAMPLE_PHOTO } from "../../../../../components/FrameCanvas";
 
-interface Meta { name: string; format: FrameFormat; orientation: "portrait" | "landscape"; customW: number; customH: number; active: boolean }
-interface ApiFrame { id: string; name: string; format: FrameFormat; orientation: "portrait" | "landscape"; widthPx: number; heightPx: number; active: boolean; updatedAt: string; layers: FrameLayer[] }
+interface Meta { name: string; format: FrameFormat; orientation: "portrait" | "landscape"; customW: number; customH: number; active: boolean; sponsorId: string | null }
+interface ApiFrame { id: string; name: string; format: FrameFormat; orientation: "portrait" | "landscape"; widthPx: number; heightPx: number; active: boolean; sponsorId: string | null; updatedAt: string; layers: FrameLayer[] }
 interface Evt { id: string; name: string }
+interface Sp { id: string; name: string; hasLogo: boolean; active: boolean }
 type Drag = { mode: "move" | "resize" | "rotate"; id: string; sx: number; sy: number; start: FrameLayer; hx: number; hy: number; moved: boolean };
 
 const TYPES: [LayerType, string][] = [["photo", "Photo placeholder"], ["image", "Image / overlay"], ["text", "Text"], ["shape", "Shape"], ["logo", "Logo"]];
@@ -32,6 +33,7 @@ function Designer({ me }: { me: Me }) {
   const [msg, setMsg] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false); const [conflict, setConflict] = useState(false);
   const [ev, setEv] = useState<(EventInfo & { settings: { branding: { clientLogo?: string; eventLogo?: string } } }) | null>(null);
   const [others, setOthers] = useState<Evt[]>([]);
+  const [sponsors, setSponsors] = useState<Sp[]>([]);
   const [avail, setAvail] = useState(600);
   const wrap = useRef<HTMLDivElement>(null); const canvas = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null); const dragLayers = useRef<FrameLayer[]>([]);
@@ -40,13 +42,14 @@ function Designer({ me }: { me: Me }) {
   const [layerDnd, setLayerDnd] = useState<string | null>(null);
 
   const apply = useCallback((f: ApiFrame) => {
-    setMeta({ name: f.name, format: f.format, orientation: f.orientation, active: f.active, customW: f.format === "custom" ? Math.round((f.widthPx / 300) * 10) / 10 : 4, customH: f.format === "custom" ? Math.round((f.heightPx / 300) * 10) / 10 : 6 });
+    setMeta({ name: f.name, format: f.format, orientation: f.orientation, active: f.active, sponsorId: f.sponsorId ?? null, customW: f.format === "custom" ? Math.round((f.widthPx / 300) * 10) / 10 : 4, customH: f.format === "custom" ? Math.round((f.heightPx / 300) * 10) / 10 : 6 });
     setLayers(f.layers); setUpdatedAt(f.updatedAt); setDirty(false); setPast([]); setFuture([]); setConflict(false);
   }, []);
   const load = useCallback(async () => {
     try {
       apply((await api<{ frame: ApiFrame }>(`/api/v1/events/${id}/frames/${frameId}`)).frame);
       setEv((await api<{ event: any }>(`/api/v1/events/${id}`)).event);
+      setSponsors((await api<{ sponsors: Sp[] }>(`/api/v1/events/${id}/sponsors`)).sponsors);
       if (role === "super_admin") setOthers((await api<{ events: Evt[] }>("/api/v1/events")).events.filter((e) => e.id !== id));
     } catch (x: any) { setErr(x.status === 403 ? "You do not have access to this event." : x.status === 404 ? "Frame not found." : x.message); }
   }, [id, frameId, apply, role]);
@@ -162,7 +165,7 @@ function Designer({ me }: { me: Me }) {
   async function save() {
     if (!meta) return; setBusy(true); setErr(""); setMsg("");
     try {
-      const body: any = { name: meta.name, format: meta.format, orientation: meta.orientation, active: meta.active, layers, expectedUpdatedAt: updatedAt };
+      const body: any = { name: meta.name, format: meta.format, orientation: meta.orientation, active: meta.active, sponsorId: meta.sponsorId, layers, expectedUpdatedAt: updatedAt };
       if (meta.format === "custom") { body.customWidthIn = meta.customW; body.customHeightIn = meta.customH; }
       apply((await api<{ frame: ApiFrame }>(`/api/v1/events/${id}/frames/${frameId}`, { method: "PUT", body })).frame); setMsg("Saved.");
     } catch (x: any) {
@@ -186,6 +189,8 @@ function Designer({ me }: { me: Me }) {
   const assetUrl = (n: string) => `/api/v1/events/${id}/frame-assets/${n}`;
   const photosSample = Object.fromEntries(layers.filter((l) => l.type === "photo").map((l: any) => [l.slot, SAMPLE_PHOTO]));
   const visible = layers.filter((l) => !l.hidden);
+  const mySponsor = sponsors.find((s) => s.id === meta.sponsorId);
+  const sponsorLogo = mySponsor?.hasLogo ? `/api/v1/events/${id}/sponsors/${mySponsor.id}/logo` : null;
 
   return (
     <>
@@ -197,6 +202,7 @@ function Designer({ me }: { me: Me }) {
         <select disabled={!canEdit} value={meta.orientation} onChange={(e) => changeMeta({ orientation: e.target.value as any })} style={{ width: "auto" }} aria-label="Orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select>
         <span className="muted">{size.widthPx}×{size.heightPx}px @300 DPI</span>
         <label className="chk"><input type="checkbox" disabled={!canEdit} checked={meta.active} onChange={(e) => changeMeta({ active: e.target.checked })} /> Available to guests</label>
+        <select disabled={!canEdit} value={meta.sponsorId ?? ""} onChange={(e) => changeMeta({ sponsorId: e.target.value || null })} style={{ width: "auto" }} aria-label="Sponsor of this frame"><option value="">No sponsor</option>{sponsors.map((s) => <option key={s.id} value={s.id}>Sponsor: {s.name}{s.active ? "" : " (off)"}</option>)}</select>
         <div className="inl" style={{ marginLeft: "auto" }}>
           <button className="mini" onClick={undo} disabled={!past.length}>Undo</button><button className="mini" onClick={redo} disabled={!future.length}>Redo</button>
           <button className={"mini" + (snap ? " primary" : "")} onClick={() => setSnap(!snap)}>Snap</button>
@@ -235,7 +241,7 @@ function Designer({ me }: { me: Me }) {
             <div ref={canvas} style={{ position: "relative", width: dispW, height: dispH, boxShadow: "0 4px 24px rgba(0,0,0,.25)", touchAction: "none" }}
               onPointerDown={(e) => { if (e.target === e.currentTarget) setSel(null); }}>
               <FrameCanvas widthPx={size.widthPx} heightPx={size.heightPx} layers={layers} event={info} displayWidth={dispW} assetUrl={assetUrl}
-                logoUrl={(k) => (logos[k] ? `/api/v1/events/${id}/logo/${k}` : null)} photos={preview ? photosSample : {}} showPlaceholders />
+                logoUrl={(k) => (logos[k] ? `/api/v1/events/${id}/logo/${k}` : null)} sponsorLogo={sponsorLogo} photos={preview ? photosSample : {}} showPlaceholders />
               {!preview && visible.map((l) => !l.locked && (
                 <div key={l.id} onPointerDown={(e) => onDown(e, l, "move")} style={{ position: "absolute", left: `${l.x * 100}%`, top: `${l.y * 100}%`, width: `${l.w * 100}%`, height: `${l.h * 100}%`, transform: l.rotation ? `rotate(${l.rotation}deg)` : undefined, cursor: canEdit ? "move" : "default" }} />
               ))}
@@ -258,7 +264,7 @@ function Designer({ me }: { me: Me }) {
         </section>
 
         <aside className="props">
-          {selLayer ? <LayerProps l={selLayer} canEdit={canEdit} patch={(p) => patch(selLayer.id, p)} upload={upload} assetUrl={assetUrl}
+          {selLayer ? <LayerProps hasSponsor={!!mySponsor} l={selLayer} canEdit={canEdit} patch={(p) => patch(selLayer.id, p)} upload={upload} assetUrl={assetUrl}
             onRemove={() => removeLayer(selLayer.id)} onDuplicate={() => duplicateLayer(selLayer.id)} />
             : <p className="muted">Select a layer on the canvas or in the list to edit it.</p>}
         </aside>
@@ -267,8 +273,8 @@ function Designer({ me }: { me: Me }) {
   );
 }
 
-function LayerProps({ l, canEdit, patch, upload, assetUrl, onRemove, onDuplicate }: {
-  l: FrameLayer; canEdit: boolean; patch: (p: Record<string, unknown>) => void; upload: (f: File) => Promise<string | null>; assetUrl: (n: string) => string; onRemove: () => void; onDuplicate: () => void;
+function LayerProps({ l, canEdit, patch, upload, assetUrl, onRemove, onDuplicate, hasSponsor }: {
+  l: FrameLayer; canEdit: boolean; patch: (p: Record<string, unknown>) => void; upload: (f: File) => Promise<string | null>; assetUrl: (n: string) => string; onRemove: () => void; onDuplicate: () => void; hasSponsor: boolean;
 }) {
   const num = (label: string, v: number, set: (n: number) => void, step = 0.5, min = -25, max = 150) => (
     <div className="prow"><label>{label}</label><input type="number" step={step} min={min} max={max} value={pct(v)} onChange={(e) => set(clamp(Number(e.target.value) / 100, min / 100, max / 100))} /></div>
@@ -307,7 +313,7 @@ function LayerProps({ l, canEdit, patch, upload, assetUrl, onRemove, onDuplicate
         {col("Fill", l.fill, (s) => patch({ fill: s }))}
         <div className="prow"><label>Rounded corners ({Math.round(l.radius * 100)}%)</label><input type="range" min={0} max={50} value={Math.round(l.radius * 100)} onChange={(e) => patch({ radius: Number(e.target.value) / 100 })} /></div>
       </>}
-      {l.type === "logo" && <div className="prow"><label>Which logo (upload under Branding)</label><select value={l.which} onChange={(e) => patch({ which: e.target.value })}><option value="event">Event logo</option><option value="client">Client logo</option></select></div>}
+      {l.type === "logo" && <div className="prow"><label>Which logo (upload under Branding or Sponsors)</label><select value={l.which} onChange={(e) => patch({ which: e.target.value })}><option value="event">Event logo</option><option value="client">Client logo</option><option value="sponsor">Frame's sponsor logo</option></select>{l.which === "sponsor" && !hasSponsor && <div className="muted">Choose a sponsor for this frame in the bar above, and upload its logo under Sponsors.</div>}</div>}
       <div className="inl" style={{ marginTop: 12 }}><button className="mini" onClick={onDuplicate}>Duplicate</button><button className="mini danger" onClick={onRemove}>Delete layer</button></div>
     </fieldset>
   );

@@ -114,7 +114,7 @@ describe("public access", () => {
   });
   it("exposes only what a display needs (no guest data, no other tokens except the join link)", async () => {
     const j = (await app.inject({ method: "GET", url: W(wtA) })).json();
-    expect(Object.keys(j).sort()).toEqual(["event", "imageSizes", "joinPath", "logos", "settings"]);
+    expect(Object.keys(j).sort()).toEqual(["event", "imageSizes", "joinPath", "logos", "settings", "sponsors"]);
     expect(j.joinPath).toBe(`/g/${tokA}`);
     expect(j.settings.style.background).toBeTruthy();
   });

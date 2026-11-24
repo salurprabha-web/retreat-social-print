@@ -31,3 +31,4 @@ export * from "./frame";
 export * from "./share";
 export * from "./print";
 export * from "./wall";
+export * from "./sponsor";

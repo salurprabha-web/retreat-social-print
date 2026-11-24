@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  NO_ADJUST, fillTokens, resolveShare, validateGuestInput,
+  NO_ADJUST, fillTokens, resolveShare, sponsorTagsFor, validateGuestInput,
   type Device, type EventInfo, type FrameLayer, type PageDefinition, type PhotoAdjust, type StepId,
 } from "@rsp/shared";
 import { GuestPage } from "../GuestPage";
@@ -10,16 +10,17 @@ import { ThemeFrame } from "./ThemeFrame";
 import { PhotoEditor } from "./PhotoEditor";
 import { Webcam } from "./Webcam";
 import { ShareScreen } from "./ShareScreen";
+import { SponsorStrip, type PubSponsor } from "./SponsorStrip";
 import { FRIENDLY, PhotoError, prepare, uploadPhoto } from "../../lib/photo";
 
 export interface PublicData {
-  definition: PageDefinition; event: EventInfo; logos: { event: boolean; client: boolean };
+  definition: PageDefinition; event: EventInfo; logos: { event: boolean; client: boolean }; sponsors?: PubSponsor[];
   settings: {
     maxUploadMb: number; requireConsent: boolean; photoWallEnabled?: boolean;
     share: ReturnType<typeof resolveShare>; instagramHandle: string | null; suggestedCaption: string | null;
   };
 }
-interface PubFrame { id: string; name: string; format: string; widthPx: number; heightPx: number; layers: FrameLayer[] }
+interface PubFrame { id: string; name: string; format: string; widthPx: number; heightPx: number; sponsorId?: string | null; layers: FrameLayer[] }
 interface Held { url: string; blob: Blob; w: number; h: number; uploadId: string; adjust: PhotoAdjust }
 interface Final { id: string; url: string; width: number; height: number }
 type PhotoLayer = Extract<FrameLayer, { type: "photo" }>;
@@ -211,6 +212,9 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
   const privacy = typeof footer?.props.privacyUrl === "string" ? footer.props.privacyUrl : "";
   const terms = typeof footer?.props.termsUrl === "string" ? footer.props.termsUrl : "";
   const fcAsset = (n: string) => `/api/v1/public/g/${token}/frame-assets/${n}`;
+  const sponsors = data.sponsors ?? [];
+  const sponsorLogoOf = (f: PubFrame | null) => { const s = f?.sponsorId ? sponsors.find((x) => x.id === f.sponsorId) : null; return s?.hasLogo ? `/api/v1/public/g/${token}/sponsor/${s.id}/logo` : null; };
+  const sponsorTags = sponsorTagsFor(sponsors.map((s) => ({ id: s.id, hashtag: s.hashtag })), (frames ?? []).map((f) => ({ id: f.id, sponsorId: f.sponsorId ?? null })), frame?.id ?? null);
   const fcLogo = (k: "event" | "client") => (data.logos[k] ? `/api/v1/public/g/${token}/logo/${k}` : null);
   const asSlotPhoto = (h: Held | undefined): SlotPhoto | undefined => (h ? { url: h.url, width: h.w, height: h.h, adjust: h.adjust } : undefined);
   const photosFor = (f: PubFrame, fallbackFirst: boolean) => {
@@ -295,7 +299,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
           {frames!.map((f) => (
             <button key={f.id} type="button" onClick={() => { setFrameId(f.id); setActiveSlot(1); setFinal(null); }} aria-pressed={frameId === f.id} aria-label={`Frame ${f.name}`}
               style={{ background: "rgba(255,255,255,.12)", border: frameId === f.id ? `4px solid ${t.accentColor}` : "4px solid transparent", borderRadius: 12, padding: 8, cursor: "pointer", width: "auto", margin: 0, color: "inherit", fontFamily: "inherit" }}>
-              <FrameCanvas widthPx={f.widthPx} heightPx={f.heightPx} layers={f.layers} event={data.event} displayWidth={f.widthPx > f.heightPx ? previewW : Math.round(previewW * 0.62)} assetUrl={fcAsset} logoUrl={fcLogo} photos={photosFor(f, true)} />
+              <FrameCanvas widthPx={f.widthPx} heightPx={f.heightPx} layers={f.layers} event={data.event} displayWidth={f.widthPx > f.heightPx ? previewW : Math.round(previewW * 0.62)} assetUrl={fcAsset} logoUrl={fcLogo} sponsorLogo={sponsorLogoOf(f)} photos={photosFor(f, true)} />
               <div style={{ marginTop: 6, fontSize: ".85em" }}>{f.name}</div>
             </button>
           ))}
@@ -311,7 +315,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
     body = (
       <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
         <Title id="edit" /><Msg />
-        <FrameCanvas widthPx={frame.widthPx} heightPx={frame.heightPx} layers={frame.layers} event={data.event} displayWidth={frame.widthPx > frame.heightPx ? previewW : Math.round(previewW * 0.8)} assetUrl={fcAsset} logoUrl={fcLogo} photos={photosFor(frame, false)} />
+        <FrameCanvas widthPx={frame.widthPx} heightPx={frame.heightPx} layers={frame.layers} event={data.event} displayWidth={frame.widthPx > frame.heightPx ? previewW : Math.round(previewW * 0.8)} assetUrl={fcAsset} logoUrl={fcLogo} sponsorLogo={sponsorLogoOf(frame)} photos={photosFor(frame, false)} />
         {slots.length > 1 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }} role="tablist" aria-label="Photos in this frame">
             {slots.map((l) => (
@@ -350,7 +354,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
     );
   } else if (screen === "share" && final && session) {
     body = (
-      <ShareScreen token={token} sessionId={session.id} compositionId={final.id} finalUrl={final.url} data={data} btn={btn} onDone={go}
+      <ShareScreen sponsorTags={sponsorTags} token={token} sessionId={session.id} compositionId={final.id} finalUrl={final.url} data={data} btn={btn} onDone={go}
         doneLabel={stepInfo("share").buttonLabel} title={fillTokens(stepInfo("share").title, data.event)} instructions={fillTokens(stepInfo("share").instructions, data.event)} />
     );
   } else {
@@ -379,7 +383,7 @@ export function GuestFlow({ token, data, device, zoom, vh }: { token: string; da
         <GuestPage def={def} event={data.event} device={device} minHeight={vh / zoom} guestUrl={typeof window !== "undefined" ? window.location.href : ""}
           assetUrl={assetUrl} logoUrl={fcLogo} onStart={() => void onStart()} />
       ) : (
-        <ThemeFrame def={def} device={device} minHeight={vh / zoom} assetUrl={assetUrl}>{body}</ThemeFrame>
+        <ThemeFrame def={def} device={device} minHeight={vh / zoom} assetUrl={assetUrl}>{body}{(["details", "share", "success"] as string[]).includes(screen) && <SponsorStrip token={token} sponsors={sponsors} />}</ThemeFrame>
       )}
       <input ref={camInput} type="file" accept="image/*" capture="environment" hidden onChange={fileHandler} />
       <input ref={fileInput} type="file" accept="image/*" hidden onChange={fileHandler} />

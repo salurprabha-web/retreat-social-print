@@ -19,6 +19,7 @@ import { photoRoutes } from "./routes/photos";
 import { printRoutes } from "./routes/print";
 import { agentRoutes } from "./routes/agents";
 import { wallRoutes } from "./routes/wall";
+import { sponsorRoutes } from "./routes/sponsors";
 import { PrintError } from "./printService";
 
 export async function buildApp(pool: Pool) {
@@ -96,5 +97,6 @@ export async function buildApp(pool: Pool) {
   await printRoutes(app, pool);
   await agentRoutes(app, pool);
   await wallRoutes(app, pool);
+  await sponsorRoutes(app, pool);
   return app;
 }

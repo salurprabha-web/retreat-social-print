@@ -10,6 +10,7 @@ import { requirePermission } from "../auth";
 import { config } from "../config";
 import { getFile, sniffImage, writeStable } from "../storage";
 import { notifyWall, wallBus } from "../wallBus";
+import { publicSponsors } from "./sponsors";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TOKEN = /^[0-9a-f]{24}$/;
@@ -102,6 +103,7 @@ export async function wallRoutes(app: FastifyInstance, pool: Pool) {
       settings: { displaySeconds: w.display_seconds, mode: w.mode, style: resolveWallStyle(w.style) },
       logos: { event: !!b.eventLogo, client: !!b.clientLogo },
       joinPath: `/g/${w.guest_token}`,
+      sponsors: (await publicSponsors(pool, w.id, "wall")).map((s) => ({ id: s.id, name: s.name })),
       imageSizes: WALL_IMAGE_SIZES,
     };
   });

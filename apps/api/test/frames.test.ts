@@ -171,7 +171,7 @@ describe("guest access", () => {
     expect(list.statusCode).toBe(200);
     const ids = list.json().frames.map((f: any) => f.id);
     expect(ids).toContain(act.id); expect(ids).not.toContain(off.id);
-    expect(Object.keys(list.json().frames[0]).sort()).toEqual(["format", "heightPx", "id", "layers", "name", "widthPx"]);
+    expect(Object.keys(list.json().frames[0]).sort()).toEqual(["format", "heightPx", "id", "layers", "name", "sponsorId", "widthPx"]);
     expect((await call(null, "GET", `/api/v1/public/g/${tokA}/frame-assets/${used}`)).statusCode).toBe(200);
     expect((await call(null, "GET", `/api/v1/public/g/${tokA}/frame-assets/${unused}`)).statusCode).toBe(404);
   });

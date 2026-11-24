@@ -6,13 +6,15 @@ import { api, type Me } from "../../../../lib/api";
 import { Shell } from "../../../../components/Shell";
 import { FrameCanvas, SAMPLE_PHOTO } from "../../../../components/FrameCanvas";
 
-interface Frame { id: string; name: string; format: string; orientation: string; widthPx: number; heightPx: number; active: boolean; layers: FrameLayer[] }
+interface Frame { id: string; name: string; format: string; orientation: string; widthPx: number; heightPx: number; active: boolean; sponsorId?: string | null; layers: FrameLayer[] }
 
 function Body({ me }: { me: Me }) {
   const { id } = useParams<{ id: string }>();
   const [frames, setFrames] = useState<Frame[] | null>(null);
   const [ev, setEv] = useState<(EventInfo & { settings: { branding: { clientLogo?: string; eventLogo?: string } } }) | null>(null);
   const [err, setErr] = useState("");
+  const [sponsors, setSponsors] = useState<{ id: string; name: string; hasLogo: boolean }[]>([]);
+  useEffect(() => { api<{ sponsors: { id: string; name: string; hasLogo: boolean }[] }>(`/api/v1/events/${id}/sponsors`).then((r) => setSponsors(r.sponsors)).catch(() => {}); }, [id]);
   const [f, setF] = useState({ name: "", format: "4x6", orientation: "portrait", preset: "single", w: 4, h: 6 });
   const role = me.globalRole === "super_admin" ? "super_admin" : me.eventRoles[id];
   const canEdit = role === "super_admin" || role === "event_manager";
@@ -68,7 +70,7 @@ function Body({ me }: { me: Me }) {
           <div key={fr.id} className="card fcard">
             <a href={`/events/${id}/frames/${fr.id}`} style={{ display: "block", lineHeight: 0, border: "1px solid var(--line)", alignSelf: "center" }}>
               <FrameCanvas widthPx={fr.widthPx} heightPx={fr.heightPx} layers={fr.layers} event={info} displayWidth={fr.widthPx > fr.heightPx ? 220 : 130}
-                assetUrl={(n) => `/api/v1/events/${id}/frame-assets/${n}`} logoUrl={(k) => (logos[k] ? `/api/v1/events/${id}/logo/${k}` : null)} photos={Object.fromEntries(fr.layers.filter((l) => l.type === "photo").map((l: any) => [l.slot, SAMPLE_PHOTO]))} />
+                assetUrl={(n) => `/api/v1/events/${id}/frame-assets/${n}`} logoUrl={(k) => (logos[k] ? `/api/v1/events/${id}/logo/${k}` : null)} sponsorLogo={sponsors.find((s) => s.id === fr.sponsorId && s.hasLogo) ? `/api/v1/events/${id}/sponsors/${fr.sponsorId}/logo` : null} photos={Object.fromEntries(fr.layers.filter((l) => l.type === "photo").map((l: any) => [l.slot, SAMPLE_PHOTO]))} />
             </a>
             <div><b>{fr.name}</b> {!fr.active && <span className="pill">off</span>}</div>
             <div className="muted">{FRAME_FORMATS[fr.format as keyof typeof FRAME_FORMATS]?.label ?? fr.format} · {fr.widthPx}×{fr.heightPx}px · {fr.layers.filter((l) => l.type === "photo").length} photo(s)</div>

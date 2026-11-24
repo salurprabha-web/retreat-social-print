@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { FONT_STACKS, nextSlide, type WallMode, type WallStyle } from "@rsp/shared";
 
-interface Info { event: { name: string; hashtag: string | null }; settings: { displaySeconds: number; mode: WallMode; style: WallStyle }; logos: { event: boolean; client: boolean }; joinPath: string }
+interface Info { event: { name: string; hashtag: string | null }; settings: { displaySeconds: number; mode: WallMode; style: WallStyle }; logos: { event: boolean; client: boolean }; joinPath: string; sponsors?: { id: string; name: string }[] }
 interface Photo { id: string; width: number; height: number; at: string }
 
 const CSS = `
@@ -35,6 +35,7 @@ export default function WallDisplay() {
   const [page, setPage] = useState(0);
   const [qr, setQr] = useState(""); const [idle, setIdle] = useState(false); const [fs, setFs] = useState(false);
   const [vp, setVp] = useState({ w: 1920, h: 1080 });
+  const [spPage, setSpPage] = useState(0);
 
   const known = useRef<Set<string> | null>(null); const seen = useRef(new Set<string>());
   const infoRef = useRef<Info | null>(null); infoRef.current = info;
@@ -121,6 +122,9 @@ export default function WallDisplay() {
   }, []);
   useEffect(() => { if (info?.settings.style.showJoinQr) QRCode.toDataURL(`${window.location.origin}${info.joinPath}`, { width: 600, margin: 1 }).then(setQr).catch(() => {}); }, [info?.joinPath, info?.settings.style.showJoinQr]);
 
+  const sponsorList = info?.sponsors ?? [];
+  const SP_PER = 4; const spPages = Math.max(1, Math.ceil(sponsorList.length / SP_PER));
+  useEffect(() => { if (spPages < 2) { setSpPage(0); return; } const t = setInterval(() => setSpPage((p) => (p + 1) % spPages), 8000); return () => clearInterval(t); }, [spPages]);
   const mode = info?.settings.mode ?? "slideshow"; const secs = info?.settings.displaySeconds ?? 6; const st = info?.settings.style;
 
   // ----- slideshow / random rotation -----
@@ -207,6 +211,12 @@ export default function WallDisplay() {
         )}
       </div>
 
+      {sponsorList.length > 0 && (
+        <div style={{ position: "absolute", left: "2vmin", bottom: "2vmin", zIndex: 4, display: "flex", alignItems: "center", gap: "2.5vmin", background: "rgba(255,255,255,.92)", color: "#111", borderRadius: "1.4vmin", padding: "1vmin 2.2vmin", maxWidth: "70vw" }}>
+          <div style={{ fontSize: "1.7vmin", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", opacity: .7 }}>Presented by</div>
+          {sponsorList.slice(spPage * SP_PER, (spPage + 1) * SP_PER).map((s) => <img key={s.id} src={`${API}/sponsor/${s.id}/logo`} alt={s.name} style={{ height: "7vmin", maxWidth: "18vmin", objectFit: "contain" }} />)}
+        </div>
+      )}
       {qr && st.showJoinQr && (
         <div style={{ position: "absolute", right: "2vmin", bottom: "2vmin", zIndex: 4, background: "#fff", color: "#111", borderRadius: "1.4vmin", padding: "1vmin", textAlign: "center", boxShadow: "0 1vmin 3vmin rgba(0,0,0,.4)" }}>
           <img src={qr} alt="Scan to join" style={{ width: "15vmin", height: "15vmin", display: "block" }} />

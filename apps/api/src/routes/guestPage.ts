@@ -6,6 +6,7 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { requirePermission, requireUser } from "../auth";
 import { getFile, putFile, sniffImage, svgIsSafe } from "../storage";
+import { publicSponsors } from "./sponsors";
 
 const ASSET_RE = /^[a-f0-9]{32}\.(png|jpg|webp|svg)$/;
 
@@ -179,6 +180,7 @@ export async function guestPageRoutes(app: FastifyInstance, pool: Pool) {
       definition: pe.definition,
       event: { name: info.name, hashtag: info.hashtag, eventDate: info.eventDate, clientName: info.clientName },
       logos: { event: !!b.eventLogo, client: !!b.clientLogo },
+      sponsors: await publicSponsors(pool, pe.id, "guest"),
       settings: {
         photoWallEnabled: !!st?.photo_wall_enabled, maxUploadMb: st?.max_upload_mb ?? 25, requireConsent: st?.require_consent ?? true,
         share: resolveShare(st?.share), instagramHandle: st?.instagram_handle ?? null, suggestedCaption: st?.suggested_caption ?? null,

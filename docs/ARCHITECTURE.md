@@ -61,3 +61,10 @@ Guest site -> API -> print queue (`print_jobs`) -> Windows Print Agent -> printe
 - **Live updates**: `wallBus` ticks on finish, approve/reject, hide/show, delete and settings changes; the display opens an SSE stream and also checks every 5 seconds, so a dropped stream only delays an update. In-process bus (single API instance), like the print bus.
 - **Counting**: the display reports what it showed (`POST /shown`); only pictures that are eligible at that moment are counted in `wall_views`.
 - **Guest opt-out**: `guest_sessions.wall_opt_out`, chosen on the details screen when the wall is on.
+
+## Sponsors (Phase 13)
+- **Sponsor** = name, https link, hashtag, logo (stored under `events/<event>/sponsors/`, checked by its bytes, SVG with script refused, 2 MB), active flag, and where it shows: guest screens and/or the photo wall. At most 20 per event. Staff with `builder:edit` manage them; everyone with `event:view` can read.
+- **Print**: a frame can belong to a sponsor (`frames.sponsor_id`, composite FK so it must be the same event). A frame "Logo" layer set to "Frame's sponsor logo" is drawn into the ONE final image, so it appears in the download, the wall and the print. A switched-off sponsor or one without a logo draws nothing, and the composition cache key includes the sponsor logo, so changing it never returns an older picture.
+- **Hashtags**: a sponsor without frames adds its hashtag to every guest caption; a sponsor with frames only for pictures made in those frames (`sponsorTagsFor`, shared and tested). They are added after the event-wide hashtags set on the Sharing tab.
+- **Public exposure**: guests get only active sponsors that are shown to guests, add a hashtag, or own an active frame (so the frame preview can draw the logo); the wall gets only active wall sponsors that have a logo. Each logo route re-checks that, so a switched-off sponsor's logo stops being served.
+- **Not done**: click or impression counts per sponsor, sponsor placement on the guest landing page beyond the builder's own sponsor element, copying sponsors with "Duplicate event".
