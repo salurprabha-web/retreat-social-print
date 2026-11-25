@@ -1,32 +1,48 @@
-import fs from "node:fs/promises";
-import { createReadStream } from "node:fs";
-import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { Readable } from "node:stream";
 import { config } from "./config";
+import { DiskBackend, s3FromSettings, checkKey, type StorageBackend, type PresignGetOptions } from "./storageBackends";
 
-/** Local-disk storage. Keys are random and never derived from user input; the interface is what an S3 backend would implement. */
-/** A server may carry its own storage folder (two servers in one process, as in the offline-mode tests). Without it the configured folder is used. */
+export type { StorageBackend } from "./storageBackends";
+export { S3Backend, DiskBackend } from "./storageBackends";
+
+/**
+ * Storage facade. Every file the platform keeps goes through these functions; where the bytes really live (local disk, or S3-compatible
+ * object storage such as Cloudflare R2) is decided by STORAGE_BACKEND. Keys are random and never derived from user input.
+ * A server may carry its own storage folder (two servers in one process, as in the offline-mode tests): that always means local disk.
+ */
 export const storageContext = new AsyncLocalStorage<{ root: string }>();
-const root = () => path.resolve(storageContext.getStore()?.root ?? config.storageDir);
 
-function resolveKey(key: string): string {
-  const p = path.resolve(root(), key);
-  if (!p.startsWith(root() + path.sep)) throw new Error("invalid storage key");
-  return p;
+let configured: StorageBackend | null = null;
+const folders = new Map<string, DiskBackend>();
+
+/** Test seam: a test file may install a factory (globalThis.__rspStorageFactory) to run the whole suite on another backend. */
+function configuredBackend(): StorageBackend {
+  if (configured) return configured;
+  const factory = (globalThis as { __rspStorageFactory?: () => StorageBackend }).__rspStorageFactory;
+  configured = factory ? factory() : config.storage.backend === "s3" ? s3FromSettings(config.storage.s3) : new DiskBackend(config.storageDir);
+  return configured;
 }
+export function setStorageBackend(b: StorageBackend | null) { configured = b; }
+
+function backend(): StorageBackend {
+  const root = storageContext.getStore()?.root;
+  if (!root) return configuredBackend();
+  let d = folders.get(root); if (!d) { d = new DiskBackend(root); folders.set(root, d); }
+  return d;
+}
+export const storageKind = () => backend().kind;
 
 export async function putFile(prefix: string, ext: string, data: Buffer): Promise<string> {
-  const key = `${prefix}/${randomBytes(16).toString("hex")}.${ext}`;
-  const p = resolveKey(key);
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  await fs.writeFile(p, data, { flag: "wx" });
+  const key = `${checkKey(prefix)}/${randomBytes(16).toString("hex")}.${ext}`;
+  await backend().put(key, data);
   return key;
 }
 
-export const getFile = (key: string) => fs.readFile(resolveKey(key));
-export const deleteFile = (key: string) => fs.rm(resolveKey(key), { force: true });
-export const deletePrefix = (prefix: string) => fs.rm(resolveKey(prefix), { recursive: true, force: true });
+export const getFile = (key: string): Promise<Buffer> => backend().get(key);
+export const deleteFile = (key: string): Promise<void> => backend().delete(key);
+export const deletePrefix = (prefix: string): Promise<void> => backend().deletePrefix(prefix);
 
 export type ImageKind = { ext: "png" | "jpg" | "webp" | "svg"; mime: string };
 
@@ -54,21 +70,16 @@ export function svgIsSafe(svg: string): boolean {
 }
 
 /** Read a stored file as a stream (large exports must not be held in memory). */
-export const streamFile = (key: string) => createReadStream(resolveKey(key));
+export const streamFile = (key: string): Readable => backend().stream(key);
 
 /** Write a file under a caller-chosen (stable) key, e.g. a cached thumbnail. Never used for guest-supplied names. */
-export async function writeStable(key: string, data: Buffer): Promise<void> {
-  const p = resolveKey(key);
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  await fs.writeFile(p, data);
-}
+export const writeStable = (key: string, data: Buffer): Promise<void> => backend().put(key, data);
 
 /** Names of the files directly inside a storage folder (empty when it does not exist). */
-export async function listFiles(prefix: string): Promise<string[]> {
-  try { return (await fs.readdir(resolveKey(prefix), { withFileTypes: true })).filter((d) => d.isFile()).map((d) => d.name); } catch { return []; }
-}
+export const listFiles = (prefix: string): Promise<string[]> => backend().list(prefix);
 
 /** Size of a stored file, or null when it is not there. */
-export async function statFile(key: string): Promise<number | null> {
-  try { return (await fs.stat(resolveKey(key))).size; } catch { return null; }
-}
+export const statFile = (key: string): Promise<number | null> => backend().stat(key);
+
+/** A short-lived direct address for a stored file, or null when the backend cannot make one (local disk): the caller then serves the bytes itself. */
+export const presignGet = (key: string, o: PresignGetOptions): Promise<string | null> => backend().presignGet(key, o);

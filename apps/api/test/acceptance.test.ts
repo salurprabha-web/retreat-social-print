@@ -3,6 +3,7 @@
  * What it proves is the SOFTWARE side of each step. Three things cannot be proven here and are stated at their steps: real Instagram,
  * a physical printer, and real phones. See docs/ACCEPTANCE.md.
  */
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -199,7 +200,7 @@ describe("C. Staff, printing, wall and analytics (steps 18-24)", () => {
     const img = await bearer(J.agent, "GET", J.claim.imageUrl);
     expect(img.statusCode).toBe(200); expect(img.headers["x-content-sha256"]).toBe(J.finalSha);
     expect(sha(img.rawPayload)).toBe(J.finalSha); expect(img.rawPayload.equals(J.finalBytes)).toBe(true);                       // the file to print == what the guest previewed and downloaded
-    const stored = fs.readFileSync(path.join(STORE, (await pool.query("SELECT storage_key FROM final_compositions WHERE id=$1", [J.cid])).rows[0].storage_key));
+    const stored = await readStored((await pool.query("SELECT storage_key FROM final_compositions WHERE id=$1", [J.cid])).rows[0].storage_key);
     expect(stored.equals(img.rawPayload)).toBe(true);
     expect([J.claim.widthPx, J.claim.heightPx]).toEqual([1200, 1800]);                                                          // 4x6 inch at 300 DPI
   });
@@ -241,10 +242,10 @@ describe("D. Archive and retention (step 25)", () => {
     const st = (await call(sup, "GET", `/api/v1/events/${J.eventId}/retention`)).json(); expect(st).toMatchObject({ status: "archived", retentionDays: 14, daysLeft: 14, due: false });
     expect((await runRetention(pool)).purged).toEqual([]);                                                                       // not yet: nothing is deleted early
     const finalKey = (await pool.query("SELECT storage_key FROM final_compositions WHERE id=$1", [J.cid])).rows[0].storage_key;
-    expect(fs.existsSync(path.join(STORE, finalKey))).toBe(true);
+    expect(await exists(finalKey)).toBe(true);
     await pool.query("UPDATE events SET archived_at = now() - interval '15 days' WHERE id=$1", [J.eventId]);                     // the retention period has now passed
     expect((await runRetention(pool)).purged).toEqual([J.eventId]);
-    expect(fs.existsSync(path.join(STORE, finalKey))).toBe(false);
+    expect(await exists(finalKey)).toBe(false);
     for (const t of ["guest_sessions", "photo_uploads", "final_compositions", "print_jobs", "share_events", "frame_selections", "qr_scan_events"]) expect((await pool.query(`SELECT count(*)::int n FROM ${t} WHERE event_id=$1`, [J.eventId])).rows[0].n, t).toBe(0);
     const s = (await call(sup, "GET", `/api/v1/events/${J.eventId}/reports/summary`)).json();
     expect(s.archived).toBe(true); expect(s.totals).toMatchObject({ sessions: 1, completed: 1, printed: 1, instagramAttempts: 1, scans: 1 });   // the figures survive, the guest data does not

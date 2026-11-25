@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -73,7 +74,7 @@ describe("compose", () => {
     expect(r.statusCode).toBe(201);
     const c = r.json(); expect([c.width, c.height]).toEqual([1200, 1800]);
     const row = (await pool.query("SELECT storage_key,sha256,bytes,session_id FROM final_compositions WHERE id=$1", [c.compositionId])).rows[0];
-    const onDisk = fs.readFileSync(path.join(process.env.STORAGE_DIR!, row.storage_key));
+    const onDisk = await readStored(row.storage_key);
     expect(sha(onDisk)).toBe(row.sha256); expect(onDisk.length).toBe(Number(row.bytes)); expect(c.bytes).toBe(onDisk.length);
     const meta = await sharp(onDisk).metadata(); expect([meta.format, meta.width, meta.height, meta.density]).toEqual(["jpeg", 1200, 1800, 300]);
     const viaLink = await app.inject({ method: "GET", url: pathOf(c.url) });
@@ -114,7 +115,7 @@ describe("compose", () => {
     const key1 = (await pool.query("SELECT storage_key FROM final_compositions WHERE id=$1", [one])).rows[0].storage_key;
     const two = (await compose(tokA, sid, { frameId: single, slots: [{ slot: 1, uploadId: up, adjust: { ...A0, zoom: 2 } }] })).json().compositionId;
     expect((await pool.query("SELECT 1 FROM final_compositions WHERE id=$1", [one])).rowCount).toBe(0);
-    expect(fs.existsSync(path.join(process.env.STORAGE_DIR!, key1))).toBe(false);
+    expect(await exists(key1)).toBe(false);
     // once a print job exists the printed image must never disappear
     await pool.query("INSERT INTO print_jobs(event_id,composition_id,idempotency_key) VALUES ($1,$2,$3)", [evA, two, "keep-" + two]);
     const three = (await compose(tokA, sid, { frameId: single, slots: [{ slot: 1, uploadId: up, adjust: { ...A0, zoom: 3 } }] })).json().compositionId;
@@ -154,7 +155,7 @@ describe("multi-photo frames", () => {
     const b1 = (await upload(tokA, sid, await solid(1500, 2000, "#202020"), 2)).json().uploadId;
     const keyA1 = (await pool.query("SELECT storage_key FROM photo_uploads WHERE id=$1", [a1])).rows[0].storage_key;
     const a2 = (await upload(tokA, sid, await solid(1500, 2000, "#303030"), 1)).json().uploadId;
-    expect(fs.existsSync(path.join(process.env.STORAGE_DIR!, keyA1))).toBe(false);
+    expect(await exists(keyA1)).toBe(false);
     expect((await pool.query("SELECT deleted_at FROM photo_uploads WHERE id=$1", [b1])).rows[0].deleted_at).toBeNull();
     // a photo that is part of a composition survives a later replacement
     const f = await mkFrame(evA, "Two", presetLayers("collage2", 1200, 1800));

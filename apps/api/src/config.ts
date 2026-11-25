@@ -19,6 +19,20 @@ export const config = {
   // Secure cookies are the default in production (set COOKIE_SECURE=false only for plain-http development).
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === "true" : isProd,
   storageDir: process.env.STORAGE_DIR ?? "./storage",
+  // STORAGE_BACKEND=s3 keeps files in S3-compatible object storage (Cloudflare R2); otherwise they are on the local disk (STORAGE_DIR).
+  storage: {
+    backend: (process.env.STORAGE_BACKEND === "s3" ? "s3" : "disk") as "s3" | "disk",
+    s3: {
+      endpoint: process.env.S3_ENDPOINT || undefined,           // R2: https://<account id>.r2.cloudflarestorage.com
+      bucket: process.env.S3_BUCKET ?? "",
+      region: process.env.S3_REGION ?? "auto",
+      accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
+      prefix: process.env.S3_PREFIX ?? "",
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    },
+  },
+  directUrlTtlSeconds: Number(process.env.DIRECT_URL_TTL_SECONDS ?? 300),   // lifetime of a signed storage address handed to a browser
   publicBaseUrl: (process.env.PUBLIC_BASE_URL ?? "").replace(/\/+$/, ""),
   urlSecret: process.env.SESSION_SECRET ?? "dev-only-insecure-secret",
   compositionUrlTtlHours: Number(process.env.COMPOSITION_URL_TTL_HOURS ?? 24),

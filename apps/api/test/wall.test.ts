@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -182,11 +183,11 @@ describe("which pictures may appear", () => {
   it("a deleted picture disappears and its cached wall images are removed from disk", async () => {
     const p = await pic(tokA, frameA); await bulk(evA, [p.cid], "approve");
     await app.inject({ method: "GET", url: `${W(wtA)}/img/${p.cid}?w=800` });
-    const cached = path.join(STORE, "events", evA, "wall", `${p.cid}-800.jpg`);
-    expect(fs.existsSync(cached)).toBe(true);
+    const cached = `events/${evA}/wall/${p.cid}-800.jpg`;
+    expect(await exists(cached)).toBe(true);
     expect((await bulk(evA, [p.cid], "delete", { confirmPrinted: true })).statusCode).toBe(200);
     expect(await ids(wtA)).not.toContain(p.cid);
-    expect(fs.existsSync(cached)).toBe(false);
+    expect(await exists(cached)).toBe(false);
     expect((await app.inject({ method: "GET", url: `${W(wtA)}/img/${p.cid}` })).statusCode).toBe(404);
   });
   it("deleting a guest's data removes their pictures from the wall too", async () => {
@@ -235,7 +236,7 @@ describe("images", () => {
       expect(r.headers["cache-control"]).toMatch(/private/); expect(r.headers["cache-control"]).not.toMatch(/no-store/);
       const m = await sharp(r.rawPayload).metadata();
       expect(Math.max(m.width!, m.height!)).toBeLessThanOrEqual(w);
-      expect(fs.existsSync(path.join(STORE, "events", evA, "wall", `${cid}-${w}.jpg`))).toBe(true);
+      expect(await exists(`events/${evA}/wall/${cid}-${w}.jpg`)).toBe(true);
     }
     expect((await app.inject({ method: "GET", url: `${W(wtA)}/img/${cid}` })).statusCode).toBe(200);          // default size
     const again = await app.inject({ method: "GET", url: `${W(wtA)}/img/${cid}?w=800` });                    // served from the cache

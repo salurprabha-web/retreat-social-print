@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -37,7 +38,7 @@ const png = (colour: string, w = 200, h = 100) => sharp({ create: { width: w, he
 const upload = (s: S | null, ev: string, id: string, body: Buffer | string) => adm(s, "POST", `/api/v1/events/${ev}/sponsors/${id}/logo`, body as any, { "content-type": "application/octet-stream" });
 const mk = async (ev: string, over: object = {}) => (await adm(sup, "POST", `/api/v1/events/${ev}/sponsors`, { name: "Acme", ...over })).json().sponsor;
 const jpeg = (c: string) => sharp({ create: { width: 1500, height: 2250, channels: 3, background: c } }).jpeg().toBuffer();
-const files = (ev: string) => { const d = path.join(STORE, "events", ev, "sponsors"); return fs.existsSync(d) ? fs.readdirSync(d) : []; };
+const files = (ev: string) => listStored(`events/${ev}/sponsors`);
 const sponsorBody = (over: object = {}) => ({ name: "Acme Corp", url: "https://acme.test", hashtag: "AcmeLive", active: true, placement: { guest: true, wall: true }, ...over });
 
 beforeAll(async () => {
@@ -97,12 +98,12 @@ describe("sponsor logos", () => {
   it("stores a valid image by its bytes, serves it to staff, and replaces the old file", async () => {
     const r = await upload(sup, evB, sp.id, await png("#ff0000"));
     expect(r.statusCode).toBe(201); expect(r.json().sponsor.hasLogo).toBe(true);
-    expect(files(evB)).toHaveLength(1);
+    expect((await files(evB))).toHaveLength(1);
     const got = await adm(sup, "GET", `/api/v1/events/${evB}/sponsors/${sp.id}/logo`);
     expect(got.statusCode).toBe(200); expect(got.headers["content-type"]).toBe("image/png");
     expect(got.headers["content-security-policy"]).toMatch(/sandbox/);
     await upload(sup, evB, sp.id, await png("#00ff00"));
-    expect(files(evB)).toHaveLength(1);                       // old file removed
+    expect((await files(evB))).toHaveLength(1);                       // old file removed
   });
   it("refuses non-images, script in SVG, huge files, empty bodies and the wrong event", async () => {
     expect((await upload(sup, evB, sp.id, "just text")).statusCode).toBe(415);
@@ -112,15 +113,15 @@ describe("sponsor logos", () => {
     expect((await upload(sup, evB, sp.id, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\" fill=\"red\"/></svg>")).statusCode).toBe(201);   // a safe SVG is fine
     expect((await upload(sup, evA, sp.id, await png("#0000ff"))).statusCode).toBe(404);      // sponsor belongs to B
     expect((await upload(viewer, evA, sp.id, await png("#0000ff"))).statusCode).toBe(403);
-    expect(files(evB)).toHaveLength(1);
+    expect((await files(evB))).toHaveLength(1);
   });
   it("removing the logo or the sponsor deletes the file", async () => {
     expect((await adm(sup, "DELETE", `/api/v1/events/${evB}/sponsors/${sp.id}/logo`)).json().sponsor.hasLogo).toBe(false);
-    expect(files(evB)).toHaveLength(0);
+    expect((await files(evB))).toHaveLength(0);
     await upload(sup, evB, sp.id, await png("#ff0000"));
-    expect(files(evB)).toHaveLength(1);
+    expect((await files(evB))).toHaveLength(1);
     expect((await adm(sup, "DELETE", `/api/v1/events/${evB}/sponsors/${sp.id}`)).statusCode).toBe(200);
-    expect(files(evB)).toHaveLength(0);
+    expect((await files(evB))).toHaveLength(0);
     expect((await adm(sup, "GET", `/api/v1/events/${evB}/sponsors/${sp.id}/logo`)).statusCode).toBe(404);
   });
 });
@@ -204,7 +205,7 @@ describe("sponsor frames", () => {
     const compose = () => app.inject({ method: "POST", url: `${G(tokB)}/compose`, payload: { frameId: frame, slots: [{ slot: 1, uploadId: up, adjust: A0 }] } as any, headers: h });
     const pixel = async (cid: string) => {
       const key = (await pool.query("SELECT storage_key FROM final_compositions WHERE id=$1", [cid])).rows[0].storage_key;
-      const { data, info } = await sharp(path.join(STORE, key)).raw().toBuffer({ resolveWithObject: true });
+      const { data, info } = await sharp(await readStored(key)).raw().toBuffer({ resolveWithObject: true });
       const at = (Math.round(info.height * 0.9) * info.width + Math.round(info.width * 0.5)) * info.channels;
       return [data[at], data[at + 1], data[at + 2]];
     };

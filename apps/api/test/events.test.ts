@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -135,13 +136,12 @@ describe("logo upload", () => {
   it("replacing a logo removes the old file; deleting the event removes its files", async () => {
     const first = (await call(sup, "POST", `/api/v1/events/${evA}/logo/event`, PNG, { "content-type": "image/png" })).json().event.settings.branding.eventLogo;
     const second = (await call(sup, "POST", `/api/v1/events/${evA}/logo/event`, PNG, { "content-type": "image/png" })).json().event.settings.branding.eventLogo;
-    const root = process.env.STORAGE_DIR!;
-    expect(fs.existsSync(path.join(root, first))).toBe(false);
-    expect(fs.existsSync(path.join(root, second))).toBe(true);
+    expect(await exists(first)).toBe(false);
+    expect(await exists(second)).toBe(true);
     const id = (await call(sup, "POST", "/api/v1/events", { name: "Files Gone" })).json().event.id;
     await call(sup, "POST", `/api/v1/events/${id}/logo/event`, PNG, { "content-type": "image/png" });
-    expect(fs.existsSync(path.join(root, "events", id))).toBe(true);
+    expect(((await listStored(`events/${id}/branding`)).length > 0)).toBe(true);
     await call(sup, "DELETE", `/api/v1/events/${id}`, { confirmName: "Files Gone" });
-    expect(fs.existsSync(path.join(root, "events", id))).toBe(false);
+    expect(((await listStored(`events/${id}/branding`)).length > 0)).toBe(false);
   });
 });

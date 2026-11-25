@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -51,7 +52,7 @@ async function guests(ev: { id: string; tok: string; frame: string }, n: number)
   return out;
 }
 const n = async (table: string, ev: string) => (await pool.query(`SELECT count(*)::int c FROM ${table} WHERE event_id=$1`, [ev])).rows[0].c as number;
-const files = (ev: string, sub: string) => { const d = path.join(STORE, "events", ev, sub); return fs.existsSync(d) ? fs.readdirSync(d).length : 0; };
+const files = async (ev: string, sub: string) => (await listStored(`events/${ev}/${sub}`)).length;
 const archive = (ev: string) => call(sup, "POST", `/api/v1/events/${ev}/status`, { status: "archived" });
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86400_000 + 3600_000);
 
@@ -115,7 +116,7 @@ describe("what the purge deletes and what it keeps", () => {
   it("has something to delete before the purge", async () => {
     expect(await n("guest_sessions", ev.id)).toBe(6); expect(await n("final_compositions", ev.id)).toBe(6); expect(await n("photo_uploads", ev.id)).toBe(6);
     expect(await n("print_jobs", ev.id)).toBe(6); expect(await n("share_events", ev.id)).toBe(6); expect(await n("qr_scan_events", ev.id)).toBe(4); expect(await n("frame_selections", ev.id)).toBe(6);
-    for (const d of ["originals", "finals", "thumbs", "wall"]) expect(files(ev.id, d), d).toBeGreaterThan(0);
+    for (const d of ["originals", "finals", "thumbs", "wall"]) expect((await files(ev.id, d)), d).toBeGreaterThan(0);
     expect(before.summary.totals).toMatchObject({ sessions: 6, completed: 6, printed: 1, failedAttempts: 1, scans: 4, downloads: 3, wallAppearances: 3 });
   });
   it("manual deletion is for the super administrator, needs the event's name, and shows what would go", async () => {
@@ -142,8 +143,8 @@ describe("what the purge deletes and what it keeps", () => {
     const r = await runRetention(pool, { now: daysFromNow(60) });
     expect(r.purged).toContain(ev.id);
     for (const t of ["guest_sessions", "photo_uploads", "final_compositions", "composition_photos", "print_jobs", "print_job_events", "share_events", "wall_views", "frame_selections", "qr_scan_events"]) expect(await n(t, ev.id), t).toBe(0);
-    for (const d of ["originals", "finals", "thumbs", "wall"]) expect(files(ev.id, d), d).toBe(0);
-    expect(files(ev.id, "branding")).toBeGreaterThan(0);                                                        // configuration stays
+    for (const d of ["originals", "finals", "thumbs", "wall"]) expect((await files(ev.id, d)), d).toBe(0);
+    expect((await files(ev.id, "branding"))).toBeGreaterThan(0);                                                        // configuration stays
     expect((await pool.query("SELECT count(*)::int c FROM frames WHERE event_id=$1", [ev.id])).rows[0].c).toBe(1);
     const e = (await pool.query("SELECT status, purged_at, retention_snapshot FROM events WHERE id=$1", [ev.id])).rows[0];
     expect(e.status).toBe("archived"); expect(e.purged_at).not.toBeNull(); expect(e.retention_snapshot.version).toBe(1);
@@ -183,7 +184,7 @@ describe("deleting by hand", () => {
     await archive(ev.id);
     const r = await call(sup, "POST", `/api/v1/events/${ev.id}/retention/purge`, { confirmName: "Manual Purge" });
     expect(r.statusCode).toBe(200); expect(r.json()).toMatchObject({ purged: true, counts: { guests: 2, pictures: 2 } });
-    expect(await n("guest_sessions", ev.id)).toBe(0); expect(files(ev.id, "finals")).toBe(0);
+    expect(await n("guest_sessions", ev.id)).toBe(0); expect((await files(ev.id, "finals"))).toBe(0);
     expect((await pool.query("SELECT detail FROM audit_logs WHERE event_id=$1 AND action='retention_purge'", [ev.id])).rows[0].detail.reason).toBe("manual");
   });
   it("a hold does not stop a deliberate manual deletion (a person decided)", async () => {
@@ -194,6 +195,6 @@ describe("deleting by hand", () => {
   it("another event's data is untouched by a purge", async () => {
     const a = await mkEvent("Keeper"), b = await mkEvent("Goner"); await guests(a, 2); await guests(b, 2); await archive(b.id);
     await call(sup, "POST", `/api/v1/events/${b.id}/retention/purge`, { confirmName: "Goner" });
-    expect(await n("guest_sessions", a.id)).toBe(2); expect(await n("final_compositions", a.id)).toBe(2); expect(files(a.id, "finals")).toBe(2); expect(files(b.id, "finals")).toBe(0);
+    expect(await n("guest_sessions", a.id)).toBe(2); expect(await n("final_compositions", a.id)).toBe(2); expect((await files(a.id, "finals"))).toBe(2); expect((await files(b.id, "finals"))).toBe(0);
   });
 });

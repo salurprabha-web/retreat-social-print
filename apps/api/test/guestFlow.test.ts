@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -109,7 +110,7 @@ describe("photo upload", () => {
     const row = (await pool.query("SELECT storage_key,mime,event_id FROM photo_uploads WHERE id=$1", [r.json().uploadId])).rows[0];
     expect(row.event_id).toBe(evB); expect(row.mime).toBe("image/jpeg");
     expect(row.storage_key).toMatch(new RegExp(`^events/${evB}/originals/[0-9a-f]{32}\\.jpg$`));
-    expect(fs.readFileSync(path.join(process.env.STORAGE_DIR!, row.storage_key)).equals(buf)).toBe(true);
+    expect((await readStored(row.storage_key)).equals(buf)).toBe(true);
   });
   it("accepts PNG, flags low resolution, and is idempotent for the same file", async () => {
     const s2 = (await session(tokB)).json().sessionId;
@@ -155,7 +156,7 @@ describe("photo upload", () => {
     const key1 = (await pool.query("SELECT storage_key FROM photo_uploads WHERE id=$1", [first])).rows[0].storage_key;
     const second = (await upload(tokB, s2, await jpeg(1500, 1500, "#eee"))).json().uploadId;
     expect(second).not.toBe(first);
-    expect(fs.existsSync(path.join(process.env.STORAGE_DIR!, key1))).toBe(false);
+    expect(await exists(key1)).toBe(false);
     expect((await pool.query("SELECT deleted_at FROM photo_uploads WHERE id=$1", [first])).rows[0].deleted_at).toBeTruthy();
   });
   it("caps uploads per session", async () => {

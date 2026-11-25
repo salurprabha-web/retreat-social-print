@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -47,7 +48,6 @@ async function submit(tok: string, frame: string, colour: string, opts: { fields
   return { sessionId, guestCode: sid.guestCode as string, uploadId: up, cid: c.compositionId as string };
 }
 const list = async (ev: string, qs = "", s = sup) => (await adm(s, "GET", `/api/v1/events/${ev}/compositions${qs}`)).json();
-const exists = (key: string) => fs.existsSync(path.join(STORE(), key));
 const keyOf = async (table: "final_compositions" | "photo_uploads", id: string) => (await pool.query(`SELECT storage_key FROM ${table} WHERE id=$1`, [id])).rows[0]?.storage_key as string | undefined;
 
 beforeAll(async () => {
@@ -122,7 +122,7 @@ describe("thumbnails", () => {
     expect(t.statusCode).toBe(200); expect(t.headers["content-type"]).toBe("image/jpeg");
     const m = await sharp(t.rawPayload).metadata(); expect([m.format, m.width]).toEqual(["jpeg", 400]);
     expect(t.rawPayload.length).toBeLessThan(60_000);
-    expect(exists(`events/${evA}/thumbs/c-${s.cid}-400.jpg`)).toBe(true);
+    expect((await exists(`events/${evA}/thumbs/c-${s.cid}-400.jpg`))).toBe(true);
     const u = await adm(op, "GET", `/api/v1/events/${evA}/uploads/${s.uploadId}/thumb?size=200`);
     expect((await sharp(u.rawPayload).metadata()).width).toBe(200);
     expect((await adm(op, "GET", `/api/v1/events/${evA}/compositions/${s.cid}/thumb?size=999`)).statusCode).toBe(404);
@@ -180,10 +180,10 @@ describe("deleting", () => {
     expect((await app.inject({ method: "GET", url: link })).statusCode).toBe(200);
     await adm(op, "GET", `/api/v1/events/${evA}/compositions/${s.cid}/thumb?size=200`);
     const fKey = (await keyOf("final_compositions", s.cid))!, oKey = (await keyOf("photo_uploads", s.uploadId))!;
-    expect(exists(fKey) && exists(oKey)).toBe(true);
+    expect((await exists(fKey)) && (await exists(oKey))).toBe(true);
     const r = await adm(op, "POST", `/api/v1/events/${evA}/compositions/bulk`, { ids: [s.cid], action: "delete" });
     expect(r.json()).toMatchObject({ deleted: 1, blocked: [] });
-    expect(exists(fKey)).toBe(false); expect(exists(oKey)).toBe(false); expect(exists(`events/${evA}/thumbs/c-${s.cid}-200.jpg`)).toBe(false);
+    expect((await exists(fKey))).toBe(false); expect((await exists(oKey))).toBe(false); expect((await exists(`events/${evA}/thumbs/c-${s.cid}-200.jpg`))).toBe(false);
     expect((await pool.query("SELECT 1 FROM final_compositions WHERE id=$1", [s.cid])).rowCount).toBe(0);
     expect((await pool.query("SELECT 1 FROM photo_uploads WHERE id=$1", [s.uploadId])).rowCount).toBe(0);
     expect((await app.inject({ method: "GET", url: link })).statusCode).toBe(404);
@@ -200,9 +200,9 @@ describe("deleting", () => {
     await pool.query("INSERT INTO composition_photos(composition_id,event_id,slot,upload_id,adjust) VALUES ($1,$2,1,$3,'{}')", [two, evA, up]);
     const oKey = (await keyOf("photo_uploads", up))!;
     await adm(op, "POST", `/api/v1/events/${evA}/compositions/bulk`, { ids: [one], action: "delete" });
-    expect(exists(oKey)).toBe(true); expect((await pool.query("SELECT 1 FROM photo_uploads WHERE id=$1", [up])).rowCount).toBe(1);
+    expect((await exists(oKey))).toBe(true); expect((await pool.query("SELECT 1 FROM photo_uploads WHERE id=$1", [up])).rowCount).toBe(1);
     await adm(op, "POST", `/api/v1/events/${evA}/compositions/bulk`, { ids: [two], action: "delete" });
-    expect(exists(oKey)).toBe(false);
+    expect((await exists(oKey))).toBe(false);
   });
   it("will not delete a picture with print jobs unless the operator confirms", async () => {
     const s = await submit(tokA, frameA, "#cc3300");
@@ -231,7 +231,7 @@ describe("delete all data for a guest", () => {
     expect((await adm(mgrB, "DELETE", `/api/v1/events/${evB}/guests/${s.guestCode}`)).statusCode).toBe(404);      // right event, wrong guest
     const r = await adm(mgrA, "DELETE", `/api/v1/events/${evA}/guests/${s.guestCode}`);
     expect(r.json()).toMatchObject({ ok: true, pictures: 1, originals: 1 });
-    expect(exists(fKey)).toBe(false); expect(exists(oKey)).toBe(false);
+    expect((await exists(fKey))).toBe(false); expect((await exists(oKey))).toBe(false);
     for (const t of ["guest_sessions", "photo_uploads", "final_compositions", "share_events"]) {
       const col = t === "guest_sessions" ? "id" : t === "share_events" ? "session_id" : "session_id";
       expect((await pool.query(`SELECT 1 FROM ${t} WHERE ${col}=$1`, [s.sessionId])).rowCount, t).toBe(0);
@@ -251,7 +251,7 @@ describe("export", () => {
     const files = unzipSync(new Uint8Array(z.rawPayload));
     const names = Object.keys(files); expect(names).toHaveLength(2);
     expect(names.every((n) => /^\d{4}-G[A-Z0-9]{5}-[0-9a-f]{8}\.jpg$/.test(n))).toBe(true);
-    const disk = fs.readFileSync(path.join(STORE(), (await keyOf("final_compositions", s1.cid))!));
+    const disk = await readStored((await keyOf("final_compositions", s1.cid))!);
     expect(Buffer.from(Object.values(files)[0]).equals(disk) || Buffer.from(Object.values(files)[1]).equals(disk)).toBe(true);
     const all = await adm(sup, "GET", `/api/v1/events/${ev.id}/compositions-export?status=pending`);
     expect(Object.keys(unzipSync(new Uint8Array(all.rawPayload)))).toHaveLength(1);

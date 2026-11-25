@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -126,7 +127,7 @@ describe("images, copying between events", () => {
     const img = copy.layers.find((l: any) => l.type === "image");
     expect(img.src).not.toBe(name); expect(img.src).toMatch(/^[a-f0-9]{32}\.png$/);
     expect((await call(sup, "GET", `/api/v1/events/${evB}/frame-assets/${img.src}`)).statusCode).toBe(200);
-    expect(fs.existsSync(path.join(process.env.STORAGE_DIR!, "events", evB, "frames", img.src))).toBe(true);
+    expect(await exists(`events/${evB}/frames/${img.src}`)).toBe(true);
     const evBFrames = (await call(sup, "GET", F(evB))).json().frames;
     expect(evBFrames.some((x: any) => x.id === copy.id)).toBe(true);
     expect((await pool.query("SELECT event_id FROM frames WHERE id=$1", [copy.id])).rows[0].event_id).toBe(evB);

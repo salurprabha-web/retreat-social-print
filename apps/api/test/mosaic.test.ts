@@ -1,3 +1,4 @@
+import { exists, readStored, listStored } from "./helpers/store";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
@@ -56,7 +57,7 @@ const putM = (ev: string, body: object, s: S | null = sup) => adm(s, "PUT", `/ap
 const upMaster = (ev: string, body: Buffer | string, s: S | null = sup) => adm(s, "POST", `/api/v1/events/${ev}/mosaic/master`, body as any, { "content-type": "application/octet-stream" });
 const cellOf = async (cid: string) => (await pool.query("SELECT cell FROM mosaic_tiles WHERE composition_id=$1", [cid])).rows[0]?.cell as number | undefined;
 const tileCount = async (ev: string) => (await pool.query("SELECT count(*)::int c FROM mosaic_tiles WHERE event_id=$1", [ev])).rows[0].c as number;
-const mosaicFiles = (ev: string, sub = "") => { const d = path.join(STORE, "events", ev, "mosaic", sub); return fs.existsSync(d) ? fs.readdirSync(d) : []; };
+const mosaicFiles = (ev: string, sub = "") => listStored(`events/${ev}/mosaic${sub ? "/" + sub : ""}`);
 let mtA = "";
 
 beforeAll(async () => {
@@ -108,7 +109,7 @@ describe("master image", () => {
     expect((await upMaster(evA, await master(120, 100))).statusCode).toBe(422);
     expect((await upMaster(evA, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(26 * 1024 * 1024)]))).statusCode).toBe(413);
     expect((await upMaster(evA, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(5000, 7)]))).statusCode).toBe(415);   // right signature, not decodable
-    expect(mosaicFiles(evA).filter((f) => f.endsWith(".png"))).toHaveLength(0);
+    expect((await mosaicFiles(evA)).filter((f) => f.endsWith(".png"))).toHaveLength(0);
   });
   it("builds a grid that follows the master's shape and reads its colours", async () => {
     await putM(evA, settings());
@@ -125,11 +126,11 @@ describe("master image", () => {
     expect(got.statusCode).toBe(200); expect(got.headers["content-type"]).toBe("image/png");
   });
   it("replacing the master deletes the old file and clears placed pictures", async () => {
-    const before = mosaicFiles(evA).filter((f) => f.endsWith(".png"));
+    const before = (await mosaicFiles(evA)).filter((f) => f.endsWith(".png"));
     expect(before).toHaveLength(1);
     const r = await upMaster(evA, await master(1000, 500));
     expect(r.json().master).toEqual({ width: 1000, height: 500 });
-    const after = mosaicFiles(evA).filter((f) => f.endsWith(".png"));
+    const after = (await mosaicFiles(evA)).filter((f) => f.endsWith(".png"));
     expect(after).toHaveLength(1); expect(after[0]).not.toBe(before[0]);
     await upMaster(evA, await master());                                   // back to 800x400 for the next tests
   });
@@ -182,10 +183,10 @@ describe("placing pictures", () => {
     expect(await cellOf(p.cid)).toBeUndefined();
     await bulk(evA, [p.cid], "approve"); await state(evA);
     expect(await cellOf(p.cid)).toBeDefined();
-    const thumb = path.join(STORE, "events", evA, "mosaic", "tiles", `${p.cid}.jpg`);
-    expect(fs.existsSync(thumb)).toBe(true);
+    const thumb = `events/${evA}/mosaic/tiles/${p.cid}.jpg`;
+    expect(await exists(thumb)).toBe(true);
     await bulk(evA, [p.cid], "delete", { confirmPrinted: true });
-    expect(fs.existsSync(thumb)).toBe(false);                              // the cached thumbnail goes with the picture
+    expect(await exists(thumb)).toBe(false);                              // the cached thumbnail goes with the picture
     expect(await tileCount(evA)).toBe(n - 1);
     const out = await pic(tokA, frameA, RED, { optOut: true, approve: true, ev: evA }); await state(evA);
     expect(await cellOf(out.cid)).toBeUndefined();                         // guest asked to stay off the big screen
@@ -244,12 +245,12 @@ describe("rendering", () => {
     expect(f[0]).toBeGreaterThan(e[0] + 40);                               // a placed red picture is clearly brighter than the dimmed master
     expect(e[0]).toBeLessThan(140); expect(e[2]).toBeLessThan(60);         // empty cell still shows the (dimmed) red of the master
     const v1 = r.headers["x-mosaic-version"];
-    expect(mosaicFiles(evA, "render").filter((x) => x.startsWith(`${v1}-`))).toEqual([`${v1}-800.jpg`]);
+    expect((await mosaicFiles(evA, "render")).filter((x) => x.startsWith(`${v1}-`))).toEqual([`${v1}-800.jpg`]);
     expect((await adm(sup, "GET", `/api/v1/events/${evA}/mosaic/image?w=800`)).headers["x-mosaic-version"]).toBe(v1);      // nothing changed: same version
     await pic(tokA, frameA, BLUE, { approve: true, ev: evA });
     const r2 = await adm(sup, "GET", `/api/v1/events/${evA}/mosaic/image?w=800`);
     expect(r2.headers["x-mosaic-version"]).not.toBe(v1);                   // a new picture is a new version
-    expect(mosaicFiles(evA, "render").every((x) => x.startsWith(`${r2.headers["x-mosaic-version"]}-`))).toBe(true);        // old renders removed
+    expect((await mosaicFiles(evA, "render")).every((x) => x.startsWith(`${r2.headers["x-mosaic-version"]}-`))).toBe(true);        // old renders removed
   });
   it("refuses sizes that are not offered", async () => {
     expect((await adm(sup, "GET", `/api/v1/events/${evA}/mosaic/image?w=5000`)).statusCode).toBe(404);
