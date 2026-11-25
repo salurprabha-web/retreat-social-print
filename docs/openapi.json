@@ -26,6 +26,11 @@
         "type": "http",
         "scheme": "bearer",
         "description": "sync_... credential"
+      },
+      "cronToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "CRON_SECRET (sent by the host's scheduler)"
       }
     }
   },
@@ -372,6 +377,105 @@
           }
         },
         "x-rate-limited": true
+      }
+    },
+    "/api/v1/cron/maintenance": {
+      "get": {
+        "operationId": "get_api_v1_cron_maintenance",
+        "summary": "Read: cron / maintenance",
+        "description": "Scheduled job: the host's scheduler sends the CRON_SECRET",
+        "tags": [
+          "cron"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cronToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Wrong credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "CRON_SECRET not set on this server"
+          }
+        }
+      }
+    },
+    "/api/v1/cron/print-requeue": {
+      "get": {
+        "operationId": "get_api_v1_cron_print_requeue",
+        "summary": "Read: cron / print-requeue",
+        "description": "Scheduled job: the host's scheduler sends the CRON_SECRET",
+        "tags": [
+          "cron"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cronToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Wrong credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "CRON_SECRET not set on this server"
+          }
+        }
+      }
+    },
+    "/api/v1/cron/retention": {
+      "get": {
+        "operationId": "get_api_v1_cron_retention",
+        "summary": "Read: cron / retention",
+        "description": "Scheduled job: the host's scheduler sends the CRON_SECRET",
+        "tags": [
+          "cron"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "cronToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Wrong credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "CRON_SECRET not set on this server"
+          }
+        }
       }
     },
     "/api/v1/dashboard/activity": {
@@ -2769,6 +2873,112 @@
         "x-required-permission": "builder:edit"
       }
     },
+    "/api/v1/events/{eventId}/mosaic/master/confirm": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_mosaic_master_confirm",
+        "summary": "Create or run: events / {eventId} / mosaic / master / confirm",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
+    "/api/v1/events/{eventId}/mosaic/master/upload-url": {
+      "post": {
+        "operationId": "post_api_v1_events_eventId_mosaic_master_upload_url",
+        "summary": "Create or run: events / {eventId} / mosaic / master / upload-url",
+        "description": "Staff sign-in with the permission on this event: builder:edit",
+        "tags": [
+          "events/mosaic"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "x-rsp-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Per-session CSRF token returned by login"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Not signed in"
+          },
+          "403": {
+            "description": "No permission on this event, or missing CSRF header"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-required-permission": "builder:edit"
+      }
+    },
     "/api/v1/events/{eventId}/mosaic/rebuild": {
       "post": {
         "operationId": "post_api_v1_events_eventId_mosaic_rebuild",
@@ -3201,50 +3411,6 @@
               "type": "string"
             },
             "description": "Per-session CSRF token returned by login"
-          }
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "401": {
-            "description": "Not signed in"
-          },
-          "403": {
-            "description": "No permission on this event, or missing CSRF header"
-          },
-          "429": {
-            "description": "Rate limit exceeded"
-          }
-        },
-        "x-required-permission": "print:operate"
-      }
-    },
-    "/api/v1/events/{eventId}/print/stream": {
-      "get": {
-        "operationId": "get_api_v1_events_eventId_print_stream",
-        "summary": "Read: events / {eventId} / print / stream",
-        "description": "Staff sign-in with the permission on this event: print:operate",
-        "tags": [
-          "events/print"
-        ],
-        "parameters": [
-          {
-            "name": "eventId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "security": [
@@ -5667,6 +5833,72 @@
         "x-rate-limited": true
       }
     },
+    "/api/v1/public/g/{token}/photo/confirm": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_photo_confirm",
+        "summary": "Create or run: public / g / {token} / photo / confirm",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/public/g/{token}/photo/upload-url": {
+      "post": {
+        "operationId": "post_api_v1_public_g_token_photo_upload_url",
+        "summary": "Create or run: public / g / {token} / photo / upload-url",
+        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
+        "tags": [
+          "public/g"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
     "/api/v1/public/g/{token}/session": {
       "post": {
         "operationId": "post_api_v1_public_g_token_session",
@@ -5777,38 +6009,6 @@
       "get": {
         "operationId": "get_api_v1_public_m_token_image",
         "summary": "Read: public / m / {token} / image",
-        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
-        "tags": [
-          "public/m"
-        ],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "429": {
-            "description": "Rate limit exceeded"
-          }
-        }
-      }
-    },
-    "/api/v1/public/m/{token}/stream": {
-      "get": {
-        "operationId": "get_api_v1_public_m_token_stream",
-        "summary": "Read: public / m / {token} / stream",
         "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
         "tags": [
           "public/m"
@@ -6152,38 +6352,6 @@
         }
       }
     },
-    "/api/v1/public/w/{token}/stream": {
-      "get": {
-        "operationId": "get_api_v1_public_w_token_stream",
-        "summary": "Read: public / w / {token} / stream",
-        "description": "Public (no sign-in). The address itself, a signed link or a guest session is the credential.",
-        "tags": [
-          "public/w"
-        ],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "429": {
-            "description": "Rate limit exceeded"
-          }
-        }
-      }
-    },
     "/api/v1/reports/events": {
       "get": {
         "operationId": "get_api_v1_reports_events",
@@ -6218,6 +6386,68 @@
       "put": {
         "operationId": "put_api_v1_sync_file",
         "summary": "Replace: sync / file",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/file/confirm": {
+      "post": {
+        "operationId": "post_api_v1_sync_file_confirm",
+        "summary": "Create or run: sync / file / confirm",
+        "description": "Sync credential of a local venue server (one event only; cloud server only)",
+        "tags": [
+          "sync"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "syncToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Missing or revoked credential"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        },
+        "x-rate-limited": true
+      }
+    },
+    "/api/v1/sync/file/upload-url": {
+      "post": {
+        "operationId": "post_api_v1_sync_file_upload_url",
+        "summary": "Create or run: sync / file / upload-url",
         "description": "Sync credential of a local venue server (one event only; cloud server only)",
         "tags": [
           "sync"

@@ -59,16 +59,30 @@ Run everything: `pnpm test`. The suite runs against the application in-process, 
 ## Dependencies
 `pnpm audit --prod` was run. Fixed by upgrading: `sharp` to 0.35.5 (libvips, libheif, librsvg advisories; it decodes guest photos) and `postcss` (forced to 8.5.23 or later by a workspace override; it is a build-time dependency of Next.js). After the upgrade the audit reports two moderate findings, both the same advisory on `minimatch` inside `archiver`: only reachable with attacker-supplied glob patterns; the platform passes none (it only appends files it chose to the ZIP). Left as is knowingly. Re-run the audit before every release.
 
+## Hosting on Vercel with object storage
+The same checks apply; these controls are specific to the function + bucket setup (`docs/VERCEL.md`).
+- **Direct uploads**: a phone may send one file straight to the bucket only after the API has checked the guest session, the event link, the declared size against the event's limit, and the per-session photo cap. The signed address names **one** key (in `incoming/<event>/`), lasts 5 minutes, and signs the exact size and content type, so a guest cannot declare 1 MB and send 100 MB, change the type, or reuse it for another file (verified against a real S3 server, not only the stand-in).
+- **Upload ticket**: an HMAC-signed, expiring token binds event, guest session (or staff user), slot, storage key and size. It cannot be edited or used for another event, person or key, and it works once (the unfinished object is deleted at confirm, whatever the outcome).
+- **Confirm step**: the server reads the object back and applies exactly the checks of the plain upload route (size equals declared, type decided by the bytes, HEIC refused, full decode, pixel limit against decompression bombs, SVG rules, duplicate check, replaced-photo cleanup). Anything refused is deleted. The lifecycle rule on `incoming/` removes abandoned uploads.
+- **Signed downloads**: the routes that used to stream a file (guest picture link, staff picture and original, agent image, mosaic file, ZIP and package export) make the **same authorisation decision as before**, then redirect to a short-lived (5 min) signed address for that one file, with the content type and download name set by the server. The bucket stays private. Viewing an original is still audited. SVG logos are not redirected: they are served by the API with the sandboxing header.
+- **Sync files** use the same pattern with the credential's own event, an allow-listed folder and file-name shape, and a SHA-256 the server recomputes by streaming the stored object before the file is put in place.
+- **Scheduled jobs** (`/api/v1/cron/*`): bearer secret compared by hash in constant time; switched off (503) unless `CRON_SECRET` has 32+ characters; the server on Vercel refuses to start without it, because automatic data deletion depends on it.
+- **Startup refuses unsafe hosting settings**: on Vercel, local-disk storage, in-memory rate limits, a missing cron secret and offline-server mode are errors; an S3 setup needs bucket and keys and an https endpoint.
+- **Content-Security-Policy** allows exactly one extra origin (the bucket) for connections and images, validated at build time (no wildcard, no path; plain http only for localhost).
+- **Tests added**: ticket tampering/expiry/other-guest/other-event/replay; refused file types, bombs and size mismatches with cleanup; signed-address properties; redirects only after authorisation (other event: 403, anonymous: 401, edited link: 404 with no storage address); multipart ZIP integrity; cron authentication; counters atomic under 60 parallel requests and shared by two app instances; the startup rules; the storage contract on both backends and, against a real S3 server, the refusal of a larger body, other type, other key and expired address.
+
+New residual risks of this setup: a signed address is a bearer link for 5 minutes (anyone who has it can fetch that one file; our pages send no referrer, the bucket's responses do not control that); the R2 access key lives in the Vercel environment (limit the token to the one bucket); the upload confirm holds one upload (up to the event's limit) in function memory; on Vercel the global rate limit is weak (see above).
+
 ## Not covered (read this)
 - **No external penetration test** and no formal code audit. The tests above are the developers' own.
 - **No antivirus scanning** of uploads. Originals are stored untouched (that is the point) and are only ever served to staff as images; they are decoded for composition with pixel limits.
 - **No multi-factor authentication or single sign-on.** Staff sign-in is password plus lockout and rate limits.
 - **Account lockout can be abused** to lock a known email out for 15 minutes (sign-in rate limiting per address limits the effect). An unlock button is provided.
-- **Rate limits are per address and in memory**: correct for one API instance (the supported deployment), not shared across several.
-- **Public live streams (photo wall, mosaic) have no connection cap**; they sit behind the global per-address limit. A very large event should put a limit at the reverse proxy.
+- **Rate limits**: the strict per-route limits (sign-in, guest actions, compose, print agents, sync) are counted per address and route; with `RATE_LIMIT_STORE=pg` (required on Vercel) they are counted in the database and hold across instances. The coarse global per-address limit stays in memory, so on Vercel it is per function instance and weak: add a rate-limit rule in Vercel's Firewall for `/api/v1/public/*`. Guests at one venue share an address; the per-route limits are sized for that.
+- **Public screens poll** (photo wall, mosaic, every few seconds; the live streams were removed). Each poll is a small database read behind the global per-address limit; a very large event should put a limit in front (Vercel Firewall or the reverse proxy).
 - **The CSP allows inline scripts and styles** (Next.js writes inline bootstrap data); it still blocks other origins, framing and plugins.
 - **Audit logs are database rows**: someone with database access can alter them.
-- **Object storage** (S3) is not implemented; files are on a local volume. Encrypt the volume and the backups yourself.
+- **Storage encryption and backups are the provider's**: files are on a local volume (Docker) or in an R2 bucket (Vercel). R2 encrypts at rest; it has no backup of its own. Back up the bucket and the database yourself, and expire the backups (they still hold data that retention has deleted).
 - **Offline venue servers** run on hardware you control: protect them physically and with disk encryption, and keep their sync credential secret; revoke it if the machine is lost.
 
 ## Reporting a problem

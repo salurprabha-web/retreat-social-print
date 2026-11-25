@@ -61,3 +61,7 @@ Run by hand on a development machine (Docker Desktop, `SITE_ADDRESS=localhost`, 
 | Images rebuilt after the `sharp` / `postcss` upgrade | see the Phase 17 report for the final result |
 
 Not done: a public-internet deployment, real certificate issuance, load testing, a restore onto a different machine.
+
+## Vercel-mode verification (branch `vercel`)
+Run by hand on a development PC: the production build of the site with the API inside it, on real PostgreSQL and a real S3-compatible server (MinIO), over HTTP and in a browser under the production Content-Security-Policy. Passed: sign-in, secure cookie, CSRF refusal, event/frame/publish, QR redirect, direct upload to the bucket (an oversized body, a wrong type and a replayed ticket refused), compose at 300 DPI (about 1 s), signed downloads, ZIP/package/mosaic export from storage, no unfinished upload left behind, cron, database-backed sign-in limit, the full guest journey in the browser including the share button's fetch.
+Not done: the real Vercel/Neon/Cloudflare R2 services and real phones; see `docs/VERCEL.md` section 7 for the checklist.

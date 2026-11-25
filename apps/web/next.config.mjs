@@ -10,7 +10,7 @@ const standalone = process.env.NEXT_STANDALONE === "1";
 // With object storage (Cloudflare R2) the phone uploads photos straight to the bucket and pictures are shown from signed storage addresses, so the page must be allowed to connect to it and load images from it.
 // Set STORAGE_CONNECT_ORIGIN (build time) to the bucket's address, e.g. https://<account id>.r2.cloudflarestorage.com. Nothing else is opened.
 const storageOrigin = (process.env.STORAGE_CONNECT_ORIGIN ?? "").trim();
-if (storageOrigin && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(storageOrigin)) throw new Error("STORAGE_CONNECT_ORIGIN must look like https://host (no path, no wildcard)");
+if (storageOrigin && !/^(https:\/\/[a-z0-9.-]+|http:\/\/(localhost|127\.0\.0\.1))(:\d+)?$/i.test(storageOrigin)) throw new Error("STORAGE_CONNECT_ORIGIN must look like https://host (no path, no wildcard; plain http only for localhost)");
 
 /**
  * Browser-side protection for every page. The camera is allowed on our own pages only (guests take photos with it); everything else
@@ -34,6 +34,8 @@ export default {
   distDir: process.env.NEXT_DIST_DIR ?? ".next",   // lets a second dev server (a local venue server demo) run beside the first
   ...(standalone ? { output: "standalone", outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), "../..") } : {}),
   poweredByHeader: false,
+  // Whether the API is packaged into this site's functions (Vercel). Inlined at build time: when off, the API import is not compiled in at all.
+  env: { RSP_EMBED_API: onVercel || process.env.RSP_EMBED_API === "1" ? "1" : "0" },
   transpilePackages: ["@rsp/shared"],
   // The API is loaded as it was built (apps/api/dist) and its native libraries stay native; Next copies what they need into the function.
   serverExternalPackages: ["@rsp/api", "sharp", "@napi-rs/canvas", "@node-rs/argon2", "pdfkit", "archiver", "pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
