@@ -12,8 +12,10 @@ export type Tx = pg.PoolClient;
  * With DATABASE_CA set (the provider's CA certificate, PEM text; "\n" is accepted for line breaks) the connection is encrypted and the server's
  * certificate must be signed by THAT authority. As with libpq's verify-ca, the chain is checked but not the host name (pooler addresses are shared
  * names). Without DATABASE_CA the connection string is used as it is (public authorities, as Neon and most hosts use).
+ * The address itself is checked first (checkDatabaseUrl).
  */
 export function connectionSettings(connectionString: string, env: Record<string, string | undefined> = process.env): { connectionString: string; ssl?: pg.ClientConfig["ssl"] } {
+  connectionString = checkDatabaseUrl(connectionString);
   const raw = (env.DATABASE_CA ?? "").trim();
   if (!raw) return { connectionString };
   const ca = raw.replace(/\\n/g, "\n");
@@ -21,6 +23,22 @@ export function connectionSettings(connectionString: string, env: Record<string,
   const u = new URL(connectionString);
   for (const k of ["sslmode", "sslrootcert", "sslcert", "sslkey", "uselibpqcompat", "ssl"]) u.searchParams.delete(k);      // the explicit settings below replace them
   return { connectionString: u.toString(), ssl: { ca, rejectUnauthorized: true, checkServerIdentity: () => undefined } };
+}
+
+/**
+ * Checks a database address and explains what is wrong in words, never echoing it (it contains the password).
+ * Pasted settings often carry stray spaces or line breaks; those are removed.
+ */
+export function checkDatabaseUrl(value: string): string {
+  const v = value.trim();
+  if (/\[YOUR-PASSWORD\]|\[PASSWORD\]/i.test(v)) throw new Error("The database address still contains the placeholder [YOUR-PASSWORD]: replace it (including the square brackets) with the database password.");
+  let u: URL;
+  try { u = new URL(v); } catch {
+    throw new Error("The database address is not a valid address. Most often the password contains a character that has a meaning in addresses (# / ? @ : % [ ] or a space). Either change the database password to letters and digits only, or write those characters encoded: # as %23, / as %2F, ? as %3F, @ as %40, : as %3A, % as %25.");
+  }
+  if (!/^postgres(ql)?:$/.test(u.protocol)) throw new Error("The database address must start with postgres:// or postgresql://");
+  if (!u.hostname) throw new Error("The database address has no host name.");
+  return v;
 }
 
 export function createPool(connectionString: string, opts: { max?: number; idleMs?: number; connectMs?: number } = {}): Pool {
