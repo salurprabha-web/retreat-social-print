@@ -7,7 +7,11 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const external = [...Object.keys(pkg.dependencies ?? {}).filter((d) => d !== "@rsp/shared"), "node:*"];
+// Bundled instead of loaded at run time: the shared package, and Fastify with its cookie plugins. Fastify's request injector (used by the
+// serverless entry) and @fastify/cookie require() the "cookie" package, which is ES-module only; some runtimes (Vercel's functions) refuse
+// require() of an ES module (ERR_REQUIRE_ESM). Bundling converts it once, at build time, so nothing depends on that runtime feature.
+const BUNDLED = new Set(["@rsp/shared", "fastify", "@fastify/cookie", "@fastify/rate-limit"]);
+const external = [...Object.keys(pkg.dependencies ?? {}).filter((d) => !BUNDLED.has(d)), "node:*"];
 
 fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
 await build({
