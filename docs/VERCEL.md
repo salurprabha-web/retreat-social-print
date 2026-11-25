@@ -1,6 +1,6 @@
-# Hosting on Vercel + Neon + Cloudflare R2
+# Hosting on Vercel + Neon or Supabase + Cloudflare R2
 
-No server to manage. The website and the API run on **Vercel** (the API is one function inside the same project, so the address, cookies and security headers are the same as on a server), the database is **Neon Postgres**, photos are in a **Cloudflare R2** bucket, and **Cloudflare** holds the DNS.
+No server to manage. The website and the API run on **Vercel** (the API is one function inside the same project, so the address, cookies and security headers are the same as on a server), the database is **Neon or Supabase Postgres** (any Postgres works), photos are in a **Cloudflare R2** bucket, and **Cloudflare** holds the DNS.
 (The Docker setup in `docs/DEPLOYMENT.md` still works; the code supports both.)
 
 ```
@@ -13,15 +13,26 @@ Vercel Cron ──▶ /api/v1/cron/*  (print requeue every minute, data deletion
 ```
 
 ## What you need
-A Vercel Pro account (the free Hobby plan is non-commercial), a Cloudflare account with your domain, a Neon account (Vercel's Marketplace offers it), a GitHub account. The repository's `vercel` branch holds this version.
+A Vercel Pro account (the free Hobby plan is non-commercial), a Cloudflare account with your domain, a Neon **or** Supabase account, a GitHub account. The repository's `vercel` branch holds this version.
 
-## 1. Neon database
-1. Create a project; choose a region near most of your guests and near the Vercel function region (step 4).
+## 1. Database (choose one)
+The application needs two addresses: `DATABASE_URL` (used by the running site; must go through the provider's **connection pooler**, because many short-lived function instances would otherwise exhaust the database's connections) and `DATABASE_URL_DIRECT` (used only by the build to apply migrations).
+
+### 1a. Neon
+1. Create a project in a region near your guests and near the Vercel function region (step 4).
 2. Create a database `rsp` and a role with a strong password (not `postgres`).
-3. Copy **two** addresses from the *Connect* dialog:
-   - **Pooled** (host contains `-pooler`): this is `DATABASE_URL`, used by the API.
-   - **Direct** (no `-pooler`): this is `DATABASE_URL_DIRECT`, used only to run migrations during deployment.
-   Both must end with `?sslmode=require`.
+3. *Connect* dialog: **pooled** address (host contains `-pooler`) is `DATABASE_URL`; the **direct** address (no `-pooler`) is `DATABASE_URL_DIRECT`. Both end with `?sslmode=require`. Nothing else is needed: Neon's certificate is signed by a public authority.
+
+### 1b. Supabase
+1. *New project*: pick the **region** nearest your guests (and Vercel's function region), set a long **database password** (keep it; use letters and digits, or URL-encode special characters such as `@` → `%40` when you paste it into an address), plan **Pro** for real events (the free plan pauses after a week of inactivity and has a small database).
+2. **Turn the public REST API off**: *Project Settings → API (or Data API)* → disable the Data API. The application talks to the database directly; it never needs it. (As a second layer the migrations switch on row-level security for every table, so even with the API on, its public key reads nothing; still, leave it off.)
+3. Click **Connect** (top of the project) and copy two addresses, replacing `[YOUR-PASSWORD]`:
+   - **Transaction pooler** (port **6543**, user `postgres.<project ref>`, host `aws-0-<region>.pooler.supabase.com`) is `DATABASE_URL`.
+   - **Session pooler** (port **5432**, same host and user) is `DATABASE_URL_DIRECT`. Do **not** use the "Direct connection" address: it is IPv6-only and Vercel cannot reach it.
+4. **Certificate**: Supabase signs its database certificate with its own authority, which Node does not know. *Project Settings → Database → SSL configuration → Download certificate*. Open the downloaded file in a text editor and keep the whole text (it starts with `-----BEGIN CERTIFICATE-----`). It becomes the setting `DATABASE_CA` (step 4.2); you can paste it with real line breaks, or as one line with `
+` between lines. (Without it the site fails with "self-signed certificate in certificate chain". A weaker fallback is to add `&sslmode=no-verify` to the two addresses: encrypted, but the server is not authenticated.)
+5. Leave *SSL enforcement* switched on.
+6. Both addresses must use the same login (the `postgres` user): the tables are created by it and the application must be their owner, because row-level security applies to everyone else.
 
 ## 2. Cloudflare R2 bucket
 1. R2 → *Create bucket* `rsp-photos` (keep it **private**; do not enable public access or a public domain).
@@ -42,14 +53,15 @@ Push the `vercel` branch to your private repository (`git push -u origin vercel`
    - **Root Directory**: `apps/web`, and tick **Include source files outside of the Root Directory**.
    - **Framework**: Next.js. Node.js version **22.x**.
    - **Production Branch**: `vercel` (Settings → Git).
-   - **Function Region**: close to Neon (Settings → Functions).
+   - **Function Region**: close to the database (Settings → Functions).
    - Build and install commands come from `apps/web/vercel.json`; leave the fields empty.
 2. *Settings → Environment Variables*. Add for **Production** (a Preview environment should use a *different* database and bucket):
 
 | Name | Value |
 |---|---|
-| `DATABASE_URL` | Neon pooled address |
-| `DATABASE_URL_DIRECT` | Neon direct address (build runs migrations with it; the app never uses it) |
+| `DATABASE_URL` | pooled address (Neon pooled, or Supabase transaction pooler port 6543) |
+| `DATABASE_URL_DIRECT` | address for the build's migrations (Neon direct, or Supabase **session** pooler port 5432); the running site never uses it |
+| `DATABASE_CA` | **Supabase only**: the downloaded certificate text (step 1b.4). Leave unset for Neon |
 | `SESSION_SECRET` | 32+ random characters (`openssl rand -hex 32`). Changing it invalidates photo links already given out |
 | `PUBLIC_BASE_URL` | `https://photos.yourdomain.com` (QR codes are built from it) |
 | `STORAGE_BACKEND` | `s3` |
@@ -87,7 +99,7 @@ These need the real R2 bucket and real phones, which the automated tests could n
 5. Pair the print agent and print one picture. (The agent follows a redirect to the bucket; not tested with the real agent.)
 6. Export the ZIP and the offline package; download the mosaic.
 7. Vercel → *Logs / Cron Jobs*: the three jobs run, return 200.
-8. Neon → check connections stay low during a burst of uploads.
+8. Database dashboard (Neon, or Supabase → Reports): check connections stay low during a burst of uploads.
 9. Time a compose at your biggest frame size; compare with "Measured" below.
 
 ## Measured (on a development PC, not on Vercel)
@@ -98,7 +110,7 @@ These need the real R2 bucket and real phones, which the automated tests could n
 ## Things to know
 - **No live push.** The photo wall, mosaic and operator screens ask the server every 4 seconds. Each open screen is about 900 requests an hour; watch Vercel's usage page.
 - **Offline venue servers** work against this cloud: their files go to the bucket with signed addresses.
-- **Backups.** Neon keeps point-in-time history (check your plan's window). R2 has no backup of its own: copy the bucket regularly (for example with `rclone`) if the photos matter beyond the retention period.
+- **Backups.** Neon and Supabase (Pro) keep point-in-time/daily backups (check your plan's window and turn them on). R2 has no backup of its own: copy the bucket regularly (for example with `rclone`) if the photos matter beyond the retention period.
 - **Retention** runs hourly from Vercel Cron; archived events lose their guest data after their retention period. Backups taken before that still hold the data.
 - **Local development** is unchanged (`pnpm dev`, local disk storage, `docker compose` in `deploy/`).
 - **Limits of this setup.** One function serves the whole API; an export of more than 5,000 pictures is cut at 5,000; a single request must finish within 300 s.
@@ -109,6 +121,8 @@ These need the real R2 bucket and real phones, which the automated tests could n
 | Every API call answers `server_misconfigured` | Vercel function logs: the line `[config] ERROR:` names the missing setting |
 | Upload hangs or fails after choosing a photo | bucket CORS (step 2.4) and `STORAGE_CONNECT_ORIGIN` (browser console shows a CSP or CORS message) |
 | Pictures do not show / share does nothing | same two; also check the signed address host matches `STORAGE_CONNECT_ORIGIN` |
+| Every API call fails with `self-signed certificate in certificate chain` | Supabase: `DATABASE_CA` missing or wrong (step 1b.4) |
+| Database errors about too many connections / `prepared statement` | `DATABASE_URL` must be the **transaction** pooler (port 6543); keep `DB_POOL_MAX` at its default (3) |
 | Migrations did not run | `DATABASE_URL_DIRECT` set for the **Production** scope? Build log shows `Applied:` or `Database is up to date` |
 | Sign-in answers 429 for everyone | all guests share one address: another proxy (orange cloud) is in front; use grey cloud |
 | Data deletion or print requeue never happens | Vercel → Cron Jobs; `CRON_SECRET` set? |

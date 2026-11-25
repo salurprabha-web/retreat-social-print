@@ -87,3 +87,7 @@ New residual risks of this setup: a signed address is a bearer link for 5 minute
 
 ## Reporting a problem
 Send details to the administrator of your installation. Do not test against a live event.
+
+## Hosted databases (Supabase and similar)
+- **Row-level security on every table** (migration 016): some hosts publish the `public` schema through a REST API for the roles `anon` and `authenticated`, using a key that is public by design. All tables have row-level security switched on with no policies, and those roles' privileges are revoked where they exist, so that key reads and changes nothing. A test fails if any table in `public` lacks it (new migrations must switch it on), and another proves a non-owner role sees and changes nothing even with table privileges. The application is the tables' owner, which row-level security does not apply to; **use the same database login for migrations and for the running site**. Keep the host's Data API switched off as well.
+- **Certificate authority**: a database with its own authority is connected to with `DATABASE_CA` (chain verified against that authority; the host name is not checked, as with libpq `verify-ca`). Tested against a real TLS server with a private authority: the plain address fails, the right authority connects encrypted, another authority is refused. Without it `sslmode=no-verify` is the (weaker) fallback.

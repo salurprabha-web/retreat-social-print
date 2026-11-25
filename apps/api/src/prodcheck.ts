@@ -18,6 +18,15 @@ export function checkProductionEnv(env: Record<string, string | undefined>): Env
   else if (/postgres:postgres@/i.test(db) || /:(postgres|password|changeme)@/i.test(db)) errors.push("DATABASE_URL uses a default database password. Create a dedicated user with a strong password.");
   else if (!/^postgres(ql)?:\/\//i.test(db)) errors.push("DATABASE_URL must start with postgres://");
 
+  // Hosted-database specifics that otherwise show up only as a cryptic connection error.
+  if (db) {
+    let host = "", port = "";
+    try { const u = new URL(db); host = u.hostname.toLowerCase(); port = u.port; } catch { /* reported above */ }
+    if (host.endsWith(".supabase.co") && host.startsWith("db.")) warnings.push("DATABASE_URL is Supabase's direct address, which is IPv6-only and not reachable from Vercel. Use the pooler address (Connect > Transaction pooler, port 6543).");
+    if (host.endsWith(".supabase.com") && !env.DATABASE_CA && !/sslmode=no-verify/i.test(db)) warnings.push("Supabase signs its database certificate with its own authority. Set DATABASE_CA to its certificate (Project Settings > Database > SSL configuration), or the connection fails with 'self-signed certificate in certificate chain'.");
+    if (host.endsWith("pooler.supabase.com") && port === "5432" && env.VERCEL) warnings.push("DATABASE_URL uses Supabase's session pooler (port 5432). Use the transaction pooler (port 6543) for the application; keep the session pooler only for DATABASE_URL_DIRECT (migrations).");
+  }
+
   const base = env.PUBLIC_BASE_URL ?? "";
   if (!base) warnings.push("PUBLIC_BASE_URL is not set: QR codes will use the address of the admin page that created them. Set it to the public https:// address.");
   else if (!/^https:\/\//i.test(base)) errors.push("PUBLIC_BASE_URL must be an https:// address in production (guest cameras and share sheets need a secure page).");

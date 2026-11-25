@@ -6,8 +6,25 @@ import { fileURLToPath } from "node:url";
 export type Pool = pg.Pool;
 export type Tx = pg.PoolClient;
 
+/**
+ * Database connection settings. Some hosted databases (Supabase) sign their certificate with their own certificate authority, which Node does not
+ * know, so the driver's normal check ("sslmode=require" means full verification) fails with "self-signed certificate in certificate chain".
+ * With DATABASE_CA set (the provider's CA certificate, PEM text; "\n" is accepted for line breaks) the connection is encrypted and the server's
+ * certificate must be signed by THAT authority. As with libpq's verify-ca, the chain is checked but not the host name (pooler addresses are shared
+ * names). Without DATABASE_CA the connection string is used as it is (public authorities, as Neon and most hosts use).
+ */
+export function connectionSettings(connectionString: string, env: Record<string, string | undefined> = process.env): { connectionString: string; ssl?: pg.ClientConfig["ssl"] } {
+  const raw = (env.DATABASE_CA ?? "").trim();
+  if (!raw) return { connectionString };
+  const ca = raw.replace(/\\n/g, "\n");
+  if (!/-----BEGIN CERTIFICATE-----[\s\S]+-----END CERTIFICATE-----/.test(ca)) throw new Error("DATABASE_CA must hold the certificate authority's certificate as PEM text (-----BEGIN CERTIFICATE-----).");
+  const u = new URL(connectionString);
+  for (const k of ["sslmode", "sslrootcert", "sslcert", "sslkey", "uselibpqcompat", "ssl"]) u.searchParams.delete(k);      // the explicit settings below replace them
+  return { connectionString: u.toString(), ssl: { ca, rejectUnauthorized: true, checkServerIdentity: () => undefined } };
+}
+
 export function createPool(connectionString: string, opts: { max?: number; idleMs?: number; connectMs?: number } = {}): Pool {
-  const pool = new pg.Pool({ connectionString, max: opts.max ?? 20, ...(opts.idleMs ? { idleTimeoutMillis: opts.idleMs } : {}), ...(opts.connectMs ? { connectionTimeoutMillis: opts.connectMs } : {}) });
+  const pool = new pg.Pool({ ...connectionSettings(connectionString), max: opts.max ?? 20, ...(opts.idleMs ? { idleTimeoutMillis: opts.idleMs } : {}), ...(opts.connectMs ? { connectionTimeoutMillis: opts.connectMs } : {}) });
   // An idle connection can be dropped at any time (database restart, network blip). Without this handler Node treats
   // the pool's 'error' event as fatal and the whole server exits; with it the bad connection is discarded and replaced.
   pool.on("error", (e) => { console.error(`[db] idle connection error (connection discarded): ${e.message}`); });

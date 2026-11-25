@@ -45,6 +45,25 @@ describe("trust proxy setting", () => {
     expect(parseTrustProxy("2")).toBe(2); expect(parseTrustProxy("10.0.0.0/8, 172.16.0.1")).toEqual(["10.0.0.0/8", "172.16.0.1"]);
   });
 
+  describe("hosted database hints", () => {
+    const supa = (host: string, extra: Record<string, string | undefined> = {}) => ({ ...good, DATABASE_URL: `postgres://postgres.abcd:S7k2-xQ9vLm4@${host}/postgres`, ...extra });
+    it("warns about Supabase's IPv6-only direct address", () => {
+      expect(checkProductionEnv(supa("db.abcd.supabase.co:5432")).warnings.join()).toMatch(/IPv6-only/);
+    });
+    it("warns when a Supabase pooler is used without its certificate authority, and not once it is given or the fallback is chosen", () => {
+      expect(checkProductionEnv(supa("aws-0-ap-south-1.pooler.supabase.com:6543")).warnings.join()).toMatch(/DATABASE_CA/);
+      expect(checkProductionEnv(supa("aws-0-ap-south-1.pooler.supabase.com:6543", { DATABASE_CA: "-----BEGIN CERTIFICATE-----\nx\n-----END CERTIFICATE-----" })).warnings.join()).not.toMatch(/DATABASE_CA/);
+      expect(checkProductionEnv({ ...supa("aws-0-ap-south-1.pooler.supabase.com:6543"), DATABASE_URL: "postgres://postgres.abcd:S7k2-xQ9vLm4@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=no-verify" }).warnings.join()).not.toMatch(/DATABASE_CA/);
+    });
+    it("on Vercel it warns about the session pooler port (transaction mode is needed for many short-lived instances)", () => {
+      expect(checkProductionEnv(supa("aws-0-ap-south-1.pooler.supabase.com:5432", { VERCEL: "1" })).warnings.join()).toMatch(/transaction pooler/);
+      expect(checkProductionEnv(supa("aws-0-ap-south-1.pooler.supabase.com:5432")).warnings.join()).not.toMatch(/transaction pooler/);
+    });
+    it("says nothing about other databases", () => {
+      expect(checkProductionEnv(good).warnings).toEqual([]);
+    });
+  });
+
   describe("object storage and Vercel", () => {
     const s3env = { ...good, STORAGE_DIR: undefined, STORAGE_BACKEND: "s3", S3_BUCKET: "photos", S3_ACCESS_KEY_ID: "AKIAEXAMPLE", S3_SECRET_ACCESS_KEY: "s3cr3t-value-xyz", S3_ENDPOINT: "https://acct.r2.cloudflarestorage.com" };
     const vercel = { ...s3env, VERCEL: "1", RATE_LIMIT_STORE: "pg", CRON_SECRET: "c".repeat(40), TRUST_PROXY: "1" };
