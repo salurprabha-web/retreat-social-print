@@ -9,7 +9,8 @@ export type AuthMeta =
   | { kind: "user" }
   | { kind: "permission"; permission: Permission; eventScoped: boolean }
   | { kind: "agent" }
-  | { kind: "sync" };
+  | { kind: "sync" }
+  | { kind: "cron" };
 export const tagAuth = <T extends object>(fn: T, meta: AuthMeta): T => Object.assign(fn, { rspAuth: meta });
 
 export const COOKIE_NAME = "rsp_session";

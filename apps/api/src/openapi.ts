@@ -32,6 +32,7 @@ export function buildOpenApi(routes: readonly RouteInfo[], version: string) {
         responses["401"] = { description: "Not signed in" };
         if (mutating) parameters.push({ name: "x-rsp-csrf", in: "header", required: true, schema: { type: "string" }, description: "Per-session CSRF token returned by login" });
         break;
+      case "cron": security = [{ cronToken: [] }]; access = "Scheduled job: the host's scheduler sends the CRON_SECRET"; responses["401"] = { description: "Wrong credential" }; responses["503"] = { description: "CRON_SECRET not set on this server" }; break;
       case "agent": security = [{ agentToken: [] }]; access = "Print agent credential"; responses["401"] = { description: "Missing, revoked or unknown credential" }; break;
       case "sync": security = [{ syncToken: [] }]; access = "Sync credential of a local venue server (one event only; cloud server only)"; responses["401"] = { description: "Missing or revoked credential" }; break;
     }
@@ -54,6 +55,7 @@ export function buildOpenApi(routes: readonly RouteInfo[], version: string) {
       cookieAuth: { type: "apiKey", in: "cookie", name: "rsp_session" },
       agentToken: { type: "http", scheme: "bearer", description: "agt_... device credential" },
       syncToken: { type: "http", scheme: "bearer", description: "sync_... credential" },
+      cronToken: { type: "http", scheme: "bearer", description: "CRON_SECRET (sent by the host's scheduler)" },
     } },
     paths,
   };

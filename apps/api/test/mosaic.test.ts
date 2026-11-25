@@ -312,18 +312,13 @@ describe("public display", () => {
     expect((await app.inject({ method: "GET", url: M(r.token) })).statusCode).toBe(200);
     mtA = r.token;
   });
-  it("an open display gets a tick when a picture arrives", async () => {
-    await app.listen({ port: 0, host: "127.0.0.1" });
-    const port = (app.server.address() as any).port;
-    const ac = new AbortController();
-    const res = await fetch(`http://127.0.0.1:${port}${M(mtA)}/stream`, { signal: ac.signal });
-    expect(res.status).toBe(200); expect(res.headers.get("content-type")).toContain("text/event-stream");
-    const reader = res.body!.getReader(); const dec = new TextDecoder(); let buf = "";
-    const until = async (needle: string) => { const end = Date.now() + 8000; while (!buf.includes(needle) && Date.now() < end) { const { value, done } = await reader.read(); if (done) break; buf += dec.decode(value); } return buf.includes(needle); };
-    expect(await until("event: hello")).toBe(true);
-    const p = await pic(tokA, frameA, RED); buf = "";
+  it("there is no push stream; the display's next poll shows the new picture in its progress and version", async () => {
+    expect((await app.inject({ method: "GET", url: `${M(mtA)}/stream` })).statusCode).toBe(404);
+    const before = (await app.inject({ method: "GET", url: M(mtA) })).json();
+    const p = await pic(tokA, frameA, RED);
     await bulk(evA, [p.cid], "approve");
-    expect(await until("event: tick")).toBe(true);
-    ac.abort();
+    const after = (await app.inject({ method: "GET", url: M(mtA) })).json();
+    expect(after.progress.filled).toBe(before.progress.filled + 1);
+    expect(after.version).not.toBe(before.version);                                                      // a changed version tells the display to fetch the new picture
   });
 });

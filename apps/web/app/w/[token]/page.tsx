@@ -90,13 +90,7 @@ export default function WallDisplay() {
     } catch { if (Date.now() - lastOk.current > 15000) setOffline(true); }
   }, [API, loadInfo]);
 
-  useEffect(() => { loadInfo(); loadPhotos(); const a = setInterval(loadPhotos, 5000), b = setInterval(loadInfo, 60000); return () => { clearInterval(a); clearInterval(b); }; }, [loadInfo, loadPhotos]);
-  useEffect(() => {                                           // instant updates; the 5 second check above covers a dropped stream
-    let t: ReturnType<typeof setTimeout> | undefined;
-    const es = new EventSource(`${API}/stream`);
-    es.addEventListener("tick", () => { clearTimeout(t); t = setTimeout(() => { loadPhotos(); loadInfo(); }, 250); });
-    return () => { clearTimeout(t); es.close(); };
-  }, [API, loadPhotos, loadInfo]);
+  useEffect(() => { loadInfo(); loadPhotos(); const a = setInterval(loadPhotos, 4000), b = setInterval(loadInfo, 30000); return () => { clearInterval(a); clearInterval(b); }; }, [loadInfo, loadPhotos]);
   useEffect(() => {                                           // report what was actually shown
     const t = setInterval(async () => {
       const batch = shownQ.current.splice(0, 50); if (!batch.length) return;

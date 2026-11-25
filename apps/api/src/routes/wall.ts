@@ -9,7 +9,6 @@ import { audit } from "../audit";
 import { requirePermission } from "../auth";
 import { config } from "../config";
 import { getFile, sniffImage, writeStable } from "../storage";
-import { notifyWall, wallBus } from "../wallBus";
 import { publicSponsors } from "./sponsors";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -62,7 +61,6 @@ export async function wallRoutes(app: FastifyInstance, pool: Pool) {
       await tx.query("UPDATE event_settings SET photo_wall_enabled=$2 WHERE event_id=$1", [eventId, b.enabled]);
       await audit(tx, req.user!.id, "wall_update", { eventId, entity: "wall", detail: { enabled: b.enabled, mode: b.mode, moderationRequired: b.moderationRequired }, ip: req.ip });
     });
-    notifyWall(eventId);
     return shape((await load(eventId))!);
   });
 
@@ -72,7 +70,6 @@ export async function wallRoutes(app: FastifyInstance, pool: Pool) {
     const r = await pool.query("UPDATE photo_wall_settings SET wall_token=$2 WHERE event_id=$1", [eventId, token]);
     if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
     await audit(pool, req.user!.id, "wall_token_regenerate", { eventId, entity: "wall", ip: req.ip });
-    notifyWall(eventId);                       // open displays re-check and find their old link dead
     return { token, path: `/w/${token}` };
   });
 
@@ -147,22 +144,6 @@ export async function wallRoutes(app: FastifyInstance, pool: Pool) {
     reply.header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
     reply.header("Cache-Control", "private, max-age=300");
     return reply.send(data);
-  });
-
-  /** "Something changed" ticks. The display also polls, so a dropped stream only delays an update. */
-  app.get("/api/v1/public/w/:token/stream", async (req, reply) => {
-    const w = await wallFor((req.params as any).token);
-    if (!w) return reply.code(404).send({ error: "not_available" });
-    const eventId = w.id as string;
-    reply.hijack();
-    const res = reply.raw;
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff" });
-    res.write("retry: 3000\n\nevent: hello\ndata: {}\n\n");
-    const tick = () => res.write("event: tick\ndata: {}\n\n");
-    wallBus.on(eventId, tick);
-    const ping = setInterval(() => res.write(": ping\n\n"), 20000);
-    const done = () => { clearInterval(ping); wallBus.off(eventId, tick); };
-    req.raw.on("close", done); res.on("error", done);
   });
 
   /** The display reports what it actually showed; only pictures that are eligible now are counted. */

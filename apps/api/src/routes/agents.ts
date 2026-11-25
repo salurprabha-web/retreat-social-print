@@ -8,7 +8,7 @@ import { audit } from "../audit";
 import { config } from "../config";
 import { requirePermission, tagAuth } from "../auth";
 import { getFile } from "../storage";
-import { PrintError, claimNext, notifyPrint, reportResult, transition } from "../printService";
+import { PrintError, claimNext, reportResult, transition } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -140,7 +140,6 @@ export async function agentRoutes(app: FastifyInstance, pool: Pool) {
         await transition(tx, dev.event_id, j.id, "printing", { printerId: j.printer_id, note: "Late report from the printer agent" });
         await transition(tx, dev.event_id, j.id, "printed", { note });
       });
-      notifyPrint(dev.event_id);
       return { ok: true, late: true, status: "printed" };
     }
     if (j.status !== "printing") return reply.code(409).send({ error: "invalid_state", status: j.status });
@@ -224,7 +223,6 @@ export async function agentRoutes(app: FastifyInstance, pool: Pool) {
     await pool.query("UPDATE printers SET enabled=COALESCE($3,enabled), paper_size=$4, orientation=COALESCE($5,orientation), name=COALESCE($6,name) WHERE id=$1 AND event_id=$2",
       [printerId, eventId, b.enabled ?? null, paper, b.orientation ?? null, b.label ?? null]);
     await audit(pool, req.user!.id, "printer_update", { eventId, entity: "printer", entityId: printerId, detail: b as object, ip: req.ip });
-    notifyPrint(eventId);
     return { ok: true };
   });
   void PrintError;

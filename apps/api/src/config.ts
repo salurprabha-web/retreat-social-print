@@ -15,6 +15,8 @@ export const config = {
   loginRateLimitPerMin: Number(process.env.LOGIN_RATE_LIMIT_PER_MIN ?? 10),
   guestRateLimitPerMin: Number(process.env.GUEST_RATE_LIMIT_PER_MIN ?? 240),
   composeRateLimitPerMin: Number(process.env.COMPOSE_RATE_LIMIT_PER_MIN ?? 120),
+  rateLimitStore: (process.env.RATE_LIMIT_STORE === "pg" ? "pg" : "memory") as "pg" | "memory",   // "pg": strict limits counted in the database (serverless hosts)
+  cronSecret: process.env.CRON_SECRET ?? "",                       // 32+ characters turns the scheduled-job routes on (Vercel Cron sends it as a bearer token)
   globalRateLimitPerMin: Number(process.env.GLOBAL_RATE_LIMIT_PER_MIN ?? 1200),
   // Secure cookies are the default in production (set COOKIE_SECURE=false only for plain-http development).
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === "true" : isProd,

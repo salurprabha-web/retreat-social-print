@@ -4,7 +4,7 @@ import { MAX_COPIES, PRINT_MODES, PRINT_STATUSES, REPRINTABLE } from "@rsp/share
 import type { Pool } from "../db";
 import { audit } from "../audit";
 import { requirePermission } from "../auth";
-import { PrintError, applyAction, printBus, notifyPrint, reprint, setCopies, setPaused, type StaffAction } from "../printService";
+import { PrintError, applyAction, reprint, setCopies, setPaused, type StaffAction } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -105,7 +105,6 @@ export async function printRoutes(app: FastifyInstance, pool: Pool) {
     const before = (await queueState(eventId)).mode;
     await pool.query("UPDATE event_settings SET print_mode=$2, updated_at=now() WHERE event_id=$1", [eventId, mode]);
     await audit(pool, req.user!.id, "print_mode", { eventId, detail: { from: before, to: mode }, ip: req.ip });
-    notifyPrint(eventId);
     return { queue: await queueState(eventId) };   // existing jobs are not touched: only pictures finished from now on follow the new mode
   });
 
@@ -126,19 +125,4 @@ export async function printRoutes(app: FastifyInstance, pool: Pool) {
       queueEvents: queueEvents.map((r) => ({ at: r.at, action: r.action, by: r.who, detail: r.detail })),
     };
   });
-
-  // Live updates for the operator screen (Server-Sent Events). The screen also re-checks every few seconds, so a dropped stream never leaves it stale.
-  app.get("/api/v1/events/:eventId/print/stream", { preHandler: operate }, (req, reply) => {
-    const eventId = (req.params as any).eventId as string;
-    reply.hijack();
-    const res = reply.raw;
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff" });
-    res.write("retry: 3000\n\nevent: hello\ndata: {}\n\n");
-    const tick = () => res.write("event: tick\ndata: {}\n\n");
-    printBus.on(eventId, tick);
-    const ping = setInterval(() => res.write(": ping\n\n"), 20000);
-    const done = () => { clearInterval(ping); printBus.off(eventId, tick); };
-    req.raw.on("close", done); res.on("error", done);
-  });
-  void notifyPrint;
 }

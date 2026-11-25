@@ -7,7 +7,6 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { can, requirePermission } from "../auth";
 import { deleteFile, getFile, putFile, streamFile } from "../storage";
-import { notifyWall } from "../wallBus";
 import { wallImageKeys } from "./wall";
 import { mosaicTileKey } from "../mosaicService";
 import { cancelJobsForCompositions } from "../printService";
@@ -159,14 +158,12 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
         return k;
       });
       for (const k of keys) await deleteFile(k).catch(() => {});
-      notifyWall(eventId);
       return { deleted: doomed.length, blocked, missing };
     }
 
     if (b.action === "show_wall" || b.action === "hide_wall") {
       const r = await pool.query("UPDATE final_compositions SET show_on_wall=$3 WHERE id = ANY($1) AND event_id=$2 AND deleted_at IS NULL", [existing, eventId, b.action === "show_wall"]);
       await audit(pool, req.user!.id, b.action, { eventId, entity: "composition", detail: { ids: existing }, ip: req.ip });
-      notifyWall(eventId);
       return { updated: r.rowCount, missing };
     }
     const status = ({ approve: "approved", reject: "rejected", pending: "pending" } as const)[b.action];
@@ -175,7 +172,6 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       [existing, eventId, status, req.user!.id, b.note || null]);
     await audit(pool, req.user!.id, `photo_${status}`, { eventId, entity: "composition", detail: { ids: existing, note: b.note ?? null }, ip: req.ip });
     if (status === "rejected") await cancelJobsForCompositions(pool, eventId, existing, req.user!.id, "Picture rejected");
-    notifyWall(eventId);
     return { updated: r.rowCount, missing };
   });
 
@@ -190,7 +186,6 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
     await audit(pool, req.user!.id, `photo_${b.status}`, { eventId, entity: "composition", entityId: cid, detail: { note: b.note ?? null }, ip: req.ip });
     if (b.status === "rejected") await cancelJobsForCompositions(pool, eventId, [cid], req.user!.id, "Picture rejected");
-    notifyWall(eventId);
     return { ok: true };
   });
 
@@ -211,7 +206,6 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
       return { pictures: comps.length, originals: ups.length };
     });
     for (const k of keys) await deleteFile(k).catch(() => {});
-    notifyWall(eventId);
     return { ok: true, ...counts };
   });
 

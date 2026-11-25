@@ -5,7 +5,6 @@ import type { Pool } from "../db";
 import { audit } from "../audit";
 import { requirePermission } from "../auth";
 import { deleteFile, getFile, putFile, sniffImage, svgIsSafe } from "../storage";
-import { notifyWall } from "../wallBus";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -73,7 +72,6 @@ export async function sponsorRoutes(app: FastifyInstance, pool: Pool) {
     await pool.query("UPDATE sponsors SET name=$3,url=$4,hashtag=$5,active=$6,placement=$7 WHERE id=$1 AND event_id=$2",
       [id, eventId, b.name, b.url, cleanTag(b.hashtag) || null, b.active, JSON.stringify(b.placement)]);
     await audit(pool, req.user!.id, "sponsor_update", { eventId, entity: "sponsor", entityId: id, detail: { active: b.active }, ip: req.ip });
-    notifyWall(eventId);
     return { sponsor: shape(await one(eventId, id)) };
   });
 
@@ -83,7 +81,6 @@ export async function sponsorRoutes(app: FastifyInstance, pool: Pool) {
     const have = (await pool.query("SELECT id FROM sponsors WHERE event_id=$1", [eventId])).rows.map((r) => r.id as string);
     if (new Set(ids).size !== ids.length || ids.length !== have.length || ids.some((i) => !have.includes(i))) return reply.code(400).send({ error: "ids_mismatch" });
     for (let i = 0; i < ids.length; i++) await pool.query("UPDATE sponsors SET position=$3 WHERE id=$1 AND event_id=$2", [ids[i], eventId, i]);
-    notifyWall(eventId);
     return { ok: true };
   });
 
@@ -93,7 +90,6 @@ export async function sponsorRoutes(app: FastifyInstance, pool: Pool) {
     await pool.query("DELETE FROM sponsors WHERE id=$1 AND event_id=$2", [id, eventId]);          // frames keep existing; their sponsor link is cleared by the foreign key
     if (cur.logo_asset) await deleteFile(cur.logo_asset).catch(() => {});
     await audit(pool, req.user!.id, "sponsor_delete", { eventId, entity: "sponsor", entityId: id, detail: { name: cur.name, frames: cur.frames }, ip: req.ip });
-    notifyWall(eventId);
     return { ok: true, framesUnlinked: cur.frames };
   });
 
@@ -111,7 +107,6 @@ export async function sponsorRoutes(app: FastifyInstance, pool: Pool) {
     await pool.query("UPDATE sponsors SET logo_asset=$3 WHERE id=$1 AND event_id=$2", [id, eventId, key]);
     if (cur.logo_asset) await deleteFile(cur.logo_asset).catch(() => {});
     await audit(pool, req.user!.id, "sponsor_logo", { eventId, entity: "sponsor", entityId: id, detail: { bytes: body.length, type: t.ext }, ip: req.ip });
-    notifyWall(eventId);
     return reply.code(201).send({ sponsor: shape(await one(eventId, id)) });
   });
 
@@ -120,7 +115,6 @@ export async function sponsorRoutes(app: FastifyInstance, pool: Pool) {
     const cur = await one(eventId, id); if (!cur) return reply.code(404).send({ error: "not_found" });
     await pool.query("UPDATE sponsors SET logo_asset=NULL WHERE id=$1 AND event_id=$2", [id, eventId]);
     if (cur.logo_asset) await deleteFile(cur.logo_asset).catch(() => {});
-    notifyWall(eventId);
     return { sponsor: shape(await one(eventId, id)) };
   });
 

@@ -35,12 +35,7 @@ export default function MosaicDisplay() {
     } catch { if (Date.now() - lastOk.current > 15000) setOffline(true); }
   }, [API, width]);
 
-  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | undefined; const es = new EventSource(`${API}/stream`);
-    es.addEventListener("tick", () => { clearTimeout(t); t = setTimeout(load, 300); });
-    return () => { clearTimeout(t); es.close(); };
-  }, [API, load]);
+  useEffect(() => { load(); const t = setInterval(load, 4000); return () => clearInterval(t); }, [load]);
   useEffect(() => { const h = () => setFs(!!document.fullscreenElement); document.addEventListener("fullscreenchange", h); return () => document.removeEventListener("fullscreenchange", h); }, []);
   useEffect(() => {
     let t: ReturnType<typeof setTimeout>; const wake = () => { setIdle(false); clearTimeout(t); t = setTimeout(() => setIdle(true), 3000); };

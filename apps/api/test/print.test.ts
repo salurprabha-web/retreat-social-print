@@ -341,32 +341,16 @@ describe("queue control, mode and history", () => {
   });
 });
 
-describe("live updates", () => {
-  it("tells an open operator screen when something changes, only for its own event", async () => {
-    await app.listen({ port: 0, host: "127.0.0.1" });
-    const port = (app.server.address() as any).port;
-    const open = async (ev: string, s: S) => {
-      const ctl = new AbortController();
-      const res = await fetch(`http://127.0.0.1:${port}/api/v1/events/${ev}/print/stream`, { headers: { cookie: s.cookie }, signal: ctl.signal });
-      return { res, ctl, reader: res.body!.getReader(), buf: "" };
-    };
-    const read = async (c: Awaited<ReturnType<typeof open>>, until: string, ms = 4000) => {
-      const dec = new TextDecoder(); const end = Date.now() + ms;
-      while (!c.buf.includes(until) && Date.now() < end) {
-        const r = await Promise.race([c.reader.read(), new Promise<{ done: true; value?: undefined }>((r) => setTimeout(() => r({ done: true }), 500))]);
-        if (r.value) c.buf += dec.decode(r.value);
-      }
-      return c.buf.includes(until);
-    };
-    const a = await open(evA, op); const b = await open(evB, opB);
-    expect(a.res.status).toBe(200); expect(a.res.headers.get("content-type")).toContain("text/event-stream");
-    expect(await read(a, "event: hello")).toBe(true); expect(await read(b, "event: hello")).toBe(true);
+describe("live updates (the operator screen polls)", () => {
+  it("there is no push stream; the queue shows a new job on the next poll, only for its own event", async () => {
+    expect((await adm(op, "GET", `/api/v1/events/${evA}/print/stream`)).statusCode).toBe(404);
+    const count = async (ev: string, s: S) => ((await adm(s, "GET", `/api/v1/events/${ev}/print/jobs`)).json().jobs as unknown[]).length;
+    const a0 = await count(evA, op), b0 = await count(evB, opB);
     const c = await compose(tokA, frameA);
     await finalize(tokA, c.sid, c.cid);
-    expect(await read(a, "event: tick")).toBe(true);
-    expect(b.buf.includes("event: tick")).toBe(false);                                    // B's screen heard nothing
-    expect((await fetch(`http://127.0.0.1:${port}/api/v1/events/${evA}/print/stream`, { headers: { cookie: viewer.cookie } })).status).toBe(403);
-    expect((await fetch(`http://127.0.0.1:${port}/api/v1/events/${evA}/print/stream`)).status).toBe(401);
-    a.ctl.abort(); b.ctl.abort();
+    expect(await count(evA, op)).toBe(a0 + 1);
+    expect(await count(evB, opB)).toBe(b0);                                                              // B's screen sees nothing of A
+    expect((await adm(viewer, "GET", `/api/v1/events/${evA}/print/jobs`)).statusCode).toBe(403);
+    expect((await app.inject({ method: "GET", url: `/api/v1/events/${evA}/print/jobs` })).statusCode).toBe(401);
   });
 });

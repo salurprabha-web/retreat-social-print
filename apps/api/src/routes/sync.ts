@@ -9,8 +9,6 @@ import { requirePermission, requireUser, tagAuth } from "../auth";
 import { config } from "../config";
 import { copyFile, deleteFile, listFiles, presignGet, presignPut, putFile, statFile, storageKind, streamFile, writeStable } from "../storage";
 import { signUploadTicket, verifyUploadTicket } from "../signing";
-import { notifyWall } from "../wallBus";
-import { notifyPrint } from "../printService";
 import { wallImageKeys } from "./wall";
 import { mosaicTileKey } from "../mosaicService";
 import { MAX_PACKAGE_BYTES, PackageError, buildPackage, importPackage, latestSchema } from "../offlinePackage";
@@ -232,7 +230,6 @@ export async function syncRoutes(app: FastifyInstance, pool: Pool) {
     }
     for (const k of files) await deleteFile(k).catch(() => {});             // after the commit: removed here means removed everywhere
     await audit(pool, null, "sync_push", { eventId, entity: "sync", entityId: credId, detail: counts, ip: req.ip });
-    notifyWall(eventId); notifyPrint(eventId);
     return { ok: true, counts };
   });
 

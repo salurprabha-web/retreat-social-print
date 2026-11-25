@@ -38,7 +38,7 @@ function Operator({ me }: { me: Me }) {
   const load = useCallback(async () => {
     try {
       const d = await api<Data>(`/api/v1/events/${id}/print/jobs?limit=200`);
-      setData(d); setErr(""); setLive((l) => (l === "offline" ? "reconnecting" : l));
+      setData(d); setErr(""); setLive("live");
       const needs = d.counts.pending + d.counts.reprint_requested;
       if (sound && lastNeeds.current !== null && needs > lastNeeds.current) beep();
       lastNeeds.current = needs;
@@ -50,13 +50,10 @@ function Operator({ me }: { me: Me }) {
 
   useEffect(() => { api<{ event: { name: string } }>(`/api/v1/events/${id}`).then((r) => setEventName(r.event.name)).catch(() => {}); }, [id]);
   useEffect(() => { load(); }, [load]);
-  // Live: the server pushes a tick whenever anything changes. A slow poll backs it up, so a dropped stream never leaves the screen stale.
+  // Live: the screen asks the server every 4 seconds (a serverless host cannot keep a push stream open). "Live" means the last check worked.
   useEffect(() => {
-    const es = new EventSource(`/api/v1/events/${id}/print/stream`);
-    es.addEventListener("hello", () => setLive("live")); es.addEventListener("tick", () => load());
-    es.onerror = () => setLive("reconnecting");
-    const poll = setInterval(load, 10000); const clock = setInterval(() => setTick((t) => t + 1), 15000);
-    return () => { es.close(); clearInterval(poll); clearInterval(clock); };
+    const poll = setInterval(load, 4000); const clock = setInterval(() => setTick((t) => t + 1), 15000);
+    return () => { clearInterval(poll); clearInterval(clock); };
   }, [id, load]);
 
   async function run(key: string, fn: () => Promise<unknown>) {

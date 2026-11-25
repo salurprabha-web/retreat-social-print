@@ -25,11 +25,13 @@ import { syncRoutes } from "./routes/sync";
 import { reportRoutes } from "./routes/reports";
 import { userRoutes } from "./routes/users";
 import { retentionRoutes } from "./routes/retention";
+import { cronRoutes } from "./routes/cron";
 import { ReportError } from "./reports";
 import { storageContext } from "./storage";
 import type { SyncConfig } from "./syncService";
 import { buildOpenApi, type RouteInfo } from "./openapi";
 import { PrintError } from "./printService";
+import { HybridRateLimitStore, PgRateLimitStore } from "./rateLimitStore";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UUID_PARAMS = ["eventId", "cid", "id", "qrId", "frameId", "jobId", "deviceId", "uploadId", "uid", "targetId", "printerId"] as const;
@@ -37,7 +39,7 @@ export type RspMode = "cloud" | "local";
 declare module "fastify" { interface FastifyInstance { rspMode: RspMode; rspStorageDir: string | null; rspSync: SyncConfig | null; rspRoutes: RouteInfo[] } }
 
 /** `storageDir` and `mode` let one process host several servers (offline-mode tests); normally both come from the environment. */
-export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: RspMode; sync?: SyncConfig | null; logger?: boolean } = {}) {
+export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: RspMode; sync?: SyncConfig | null; logger?: boolean; rateLimitStore?: "memory" | "pg" } = {}) {
   // Request logs never carry credentials: cookies, tokens and guest session headers are redacted, and addresses that ARE credentials
   // (guest, wall and mosaic links, signed photo links) are masked, query strings dropped.
   const mask = (u: string) => u.split("?")[0].replace(/\/(g|w|m)\/[0-9a-f]{24}/g, "/$1/:token").replace(/\/public\/c\/[0-9a-f-]{36}/g, "/public/c/:id").replace(/\/q\/[A-Za-z0-9]{4,}/g, "/q/:code");
@@ -63,7 +65,15 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
   app.decorate("rspSync", opts.sync !== undefined ? opts.sync : (config.cloudUrl && config.syncTokens.length ? { cloudUrl: config.cloudUrl, tokens: config.syncTokens } : null));
   if (opts.storageDir) app.addHook("onRequest", (_req, _reply, done) => { storageContext.run({ root: opts.storageDir! }, done); });
   await app.register(cookie);
-  await app.register(rateLimit, { global: true, max: () => config.globalRateLimitPerMin, timeWindow: "1 minute" });
+  // Routes with their own strict limit are counted per address AND route (guests at one venue share an address, and a busy route must not use up
+  // another route's allowance); everything else shares the coarse global per-address limit. RATE_LIMIT_STORE=pg keeps the strict counters in the
+  // database so they add up across serverless instances.
+  const pgLimits = (opts.rateLimitStore ?? config.rateLimitStore) === "pg";
+  await app.register(rateLimit, {
+    global: true, max: () => config.globalRateLimitPerMin, timeWindow: "1 minute",
+    keyGenerator: (req) => ((req.routeOptions.config as any)?.rateLimit ? `${req.ip}|${req.method}|${req.routeOptions.url}` : req.ip),
+    ...(pgLimits ? { store: class { constructor() { return new HybridRateLimitStore(new PgRateLimitStore(pool)) as any; } } as any } : {}),
+  });
 
   app.addHook("onSend", async (_req, reply) => {
     reply.header("X-Content-Type-Options", "nosniff");
@@ -144,6 +154,7 @@ export async function buildApp(pool: Pool, opts: { storageDir?: string; mode?: R
   await reportRoutes(app, pool);
   await userRoutes(app, pool);
   await retentionRoutes(app, pool);
+  await cronRoutes(app, pool);
   app.get("/api/v1/openapi.json", { preHandler: requirePermission(pool, "event:create") }, async () => buildOpenApi(app.rspRoutes, "0.1.0"));
   return app;
 }

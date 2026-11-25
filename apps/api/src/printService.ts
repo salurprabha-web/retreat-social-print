@@ -1,13 +1,8 @@
-import { EventEmitter } from "node:events";
-import { notifyWall } from "./wallBus";
 import { MAX_COPIES, REPRINTABLE, canTransition, initialStatus, type PrintMode, type PrintStatus } from "@rsp/shared";
 import type { Pool, Tx } from "./db";
 import { withTx } from "./db";
 
 /** Tells open operator screens something changed. In-process: with several API instances this becomes Postgres LISTEN/NOTIFY. */
-export const printBus = new EventEmitter();
-printBus.setMaxListeners(0);
-export const notifyPrint = (eventId: string) => printBus.emit(eventId);
 
 export class PrintError extends Error {
   constructor(public code: string, public statusCode = 409, public extra: Record<string, unknown> = {}) { super(code); }
@@ -67,8 +62,6 @@ export async function finalizeComposition(pool: Pool, eventId: string, sessionId
     const id = await insertJob(tx, eventId, compositionId, initialStatus(mode), { kind: "print", key: `final:${compositionId}`, copies: s?.default_copies ?? 1 });
     return { job: id ? { id, status: initialStatus(mode) } : existing, created: !!id };
   });
-  notifyPrint(eventId);
-  notifyWall(eventId);                                  // a finished picture may now be eligible for the wall
   return out;
 }
 
@@ -83,8 +76,6 @@ export async function applyAction(pool: Pool, eventId: string, jobId: string, ac
     if (action === "approve") await tx.query("UPDATE final_compositions SET moderation='approved', moderated_by=$3, moderated_at=now() WHERE id=$1 AND event_id=$2 AND moderation='pending'", [job.composition_id, eventId, userId]);
     if (action === "reject") await tx.query("UPDATE final_compositions SET moderation='rejected', moderated_by=$3, moderated_at=now(), moderation_note=$4 WHERE id=$1 AND event_id=$2", [job.composition_id, eventId, userId, note ?? null]);
   });
-  notifyPrint(eventId);
-  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 export async function setCopies(pool: Pool, eventId: string, jobId: string, copies: number, userId: string) {
@@ -96,8 +87,6 @@ export async function setCopies(pool: Pool, eventId: string, jobId: string, copi
     await tx.query("UPDATE print_jobs SET copies=$3, updated_at=now() WHERE id=$1 AND event_id=$2", [jobId, eventId, copies]);
     await tx.query("INSERT INTO print_job_events(event_id,job_id,from_status,to_status,user_id,note) VALUES ($1,$2,$3,$3,$4,$5)", [eventId, jobId, j.status, userId, `Copies ${j.copies} → ${copies}`]);
   });
-  notifyPrint(eventId);
-  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /**
@@ -120,15 +109,12 @@ export async function reprint(pool: Pool, eventId: string, compositionId: string
     const id = await insertJob(tx, eventId, compositionId, status, { kind: "reprint", key, copies: o.copies ?? s?.default_copies ?? 1, userId });
     return { job: { id, status }, created: true };
   });
-  notifyPrint(eventId);
   return res;
 }
 
 export async function setPaused(pool: Pool, eventId: string, paused: boolean, userId: string) {
   await pool.query("UPDATE event_settings SET print_paused=$2, updated_at=now() WHERE event_id=$1", [eventId, paused]);
   await pool.query("INSERT INTO audit_logs(event_id,user_id,action) VALUES ($1,$2,$3)", [eventId, userId, paused ? "print_pause" : "print_resume"]);
-  notifyPrint(eventId);
-  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /* ---------- Used by the Windows print agent (Phase 11) and by tests that simulate it ---------- */
@@ -149,21 +135,17 @@ export async function claimNext(pool: Pool, eventId: string, printerId: string |
     await transition(tx, eventId, j.id, "printing", { printerId, note: "Sent to printer" });
     return (await tx.query("SELECT id,composition_id,copies,attempt FROM print_jobs WHERE id=$1", [j.id])).rows[0];
   });
-  if (job) notifyPrint(eventId);
   return job as { id: string; composition_id: string; copies: number; attempt: number } | null;
 }
 
 export async function reportResult(pool: Pool, eventId: string, jobId: string, ok: boolean, error?: string) {
   await withTx(pool, (tx) => transition(tx, eventId, jobId, ok ? "printed" : "failed", { expectFrom: ["printing"], error: ok ? null : error ?? "Print failed", note: ok ? "Printed" : error ?? "Print failed" }));
-  notifyPrint(eventId);
-  notifyWall(eventId);                                  // approve/reject changes what the wall may show
 }
 
 /** Jobs stuck in "printing" (agent crashed or lost connection) go back to the queue instead of hanging forever. */
 export async function requeueStale(pool: Pool, eventId: string, olderThanSeconds: number): Promise<number> {
   const stale = (await pool.query("SELECT id FROM print_jobs WHERE event_id=$1 AND synced_from IS NULL AND status='printing' AND started_at < now() - make_interval(secs => $2)", [eventId, olderThanSeconds])).rows;
   for (const s of stale) await withTx(pool, (tx) => transition(tx, eventId, s.id, "approved", { expectFrom: ["printing"], note: "Printer did not answer: back in the queue" }));
-  if (stale.length) notifyPrint(eventId);
   return stale.length;
 }
 
@@ -174,7 +156,6 @@ export async function cancelJobsForCompositions(pool: Pool, eventId: string, com
   for (const j of jobs) {
     try { await withTx(pool, (tx) => transition(tx, eventId, j.id, "cancelled", { userId, note })); } catch (e) { if (!(e instanceof PrintError)) throw e; }
   }
-  if (jobs.length) notifyPrint(eventId);
 }
 
 /** Every event's stuck jobs go back to the queue (run on a timer by the server). Returns how many were requeued. */

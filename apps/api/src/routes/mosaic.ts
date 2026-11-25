@@ -10,7 +10,6 @@ import { requirePermission } from "../auth";
 import { config } from "../config";
 import { copyFile, deleteFile, getFile, presignPut, putFile, sniffImage, statFile } from "../storage";
 import { signUploadTicket, verifyUploadTicket } from "../signing";
-import { notifyWall, wallBus } from "../wallBus";
 import { clearTiles, currentVersion, ensureProject, renderCurrent, setGrid, syncMosaic, type Project } from "../mosaicService";
 
 const TOKEN = /^[0-9a-f]{24}$/;
@@ -51,7 +50,6 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     if (p.master_storage_key && p.tile_count !== s.tileTarget) {            // a different tile count means a different grid: pictures are placed again
       await setGrid(pool, eventId, await getFile(p.master_storage_key), s.tileTarget);
     }
-    notifyWall(eventId);
     const fresh = (await ensureProject(pool, eventId));
     return describe(fresh, enabled);
   });
@@ -73,7 +71,6 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     catch (e) { await deleteFile(key).catch(() => {}); throw e; }
     if (p.master_storage_key) await deleteFile(p.master_storage_key).catch(() => {});
     await audit(pool, req.user!.id, "mosaic_master", { eventId, entity: "mosaic", detail: { bytes: body.length, type: t.ext }, ip: req.ip });
-    notifyWall(eventId);
     return reply.code(201).send(await describe(await ensureProject(pool, eventId), (await ensureProject(pool, eventId)).enabled));
   }
 
@@ -128,7 +125,6 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     await ensureProject(pool, eventId);
     await clearTiles(pool, eventId);
     await audit(pool, req.user!.id, "mosaic_rebuild", { eventId, entity: "mosaic", ip: req.ip });
-    notifyWall(eventId);
     const p = await ensureProject(pool, eventId);
     return describe(p, p.enabled);
   });
@@ -139,7 +135,6 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     const token = randomBytes(12).toString("hex");
     await pool.query("UPDATE mosaic_projects SET mosaic_token=$2 WHERE event_id=$1", [eventId, token]);
     await audit(pool, req.user!.id, "mosaic_token_regenerate", { eventId, entity: "mosaic", ip: req.ip });
-    notifyWall(eventId);
     return { token, path: `/m/${token}` };
   });
 
@@ -203,19 +198,5 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     return sendRender(m.event_id, w.data, reply, { cache: "private, max-age=300" });
   });
 
-  app.get("/api/v1/public/m/:token/stream", async (req, reply) => {
-    const m = await mosaicFor((req.params as any).token);
-    if (!m) return reply.code(404).send({ error: "not_available" });
-    const eventId = m.event_id;
-    reply.hijack();
-    const res = reply.raw;
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no", "X-Content-Type-Options": "nosniff" });
-    res.write("retry: 3000\n\nevent: hello\ndata: {}\n\n");
-    const tick = () => res.write("event: tick\ndata: {}\n\n");
-    wallBus.on(eventId, tick);
-    const ping = setInterval(() => res.write(": ping\n\n"), 20000);
-    const done = () => { clearInterval(ping); wallBus.off(eventId, tick); };
-    req.raw.on("close", done); res.on("error", done);
-  });
   void config;
 }

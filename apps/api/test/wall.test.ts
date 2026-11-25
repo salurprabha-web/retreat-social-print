@@ -283,28 +283,14 @@ describe("shown counts", () => {
   });
 });
 
-describe("live updates", () => {
-  it("an open display receives a tick when a picture is approved, and a closed one is cleaned up", async () => {
-    await app.listen({ port: 0, host: "127.0.0.1" });
-    const port = (app.server.address() as any).port;
-    const ac = new AbortController();
-    const res = await fetch(`http://127.0.0.1:${port}${W(wtA)}/stream`, { signal: ac.signal });
-    expect(res.status).toBe(200); expect(res.headers.get("content-type")).toContain("text/event-stream");
-    const reader = res.body!.getReader(); const dec = new TextDecoder(); let buf = "";
-    const until = async (needle: string) => { const end = Date.now() + 8000; while (!buf.includes(needle) && Date.now() < end) { const { value, done } = await reader.read(); if (done) break; buf += dec.decode(value); } return buf.includes(needle); };
-    expect(await until("event: hello")).toBe(true);
-    const p = await pic(tokA, frameA);                                       // finishing a picture ticks
-    expect(await until("event: tick")).toBe(true);
-    buf = "";
-    await bulk(evA, [p.cid], "approve");                                     // approving ticks
-    expect(await until("event: tick")).toBe(true);
-    ac.abort();
-    const { wallBus } = await import("../src/wallBus");
-    await new Promise((r) => setTimeout(r, 100));
-    expect(wallBus.listenerCount(evA)).toBe(0);
-  });
-  it("a stream for a disabled wall is refused", async () => {
-    await putWall(evB, settings({ enabled: false }));
-    expect((await app.inject({ method: "GET", url: `${W(wtB)}/stream` })).statusCode).toBe(404);
+describe("live updates (the display polls)", () => {
+  it("there is no push stream; a display sees a newly finished picture only once it is approved, on its next poll", async () => {
+    expect((await app.inject({ method: "GET", url: `${W(wtA)}/stream` })).statusCode).toBe(404);          // streams were removed: serverless hosts cannot hold them open
+    const p = await pic(tokA, frameA);
+    expect(await ids(wtA)).not.toContain(p.cid);                                                         // finished but not approved yet
+    await bulk(evA, [p.cid], "approve");
+    expect(await ids(wtA)).toContain(p.cid);                                                             // the next poll shows it
+    await bulk(evA, [p.cid], "reject");
+    expect(await ids(wtA)).not.toContain(p.cid);                                                         // and a rejection takes it away again
   });
 });
