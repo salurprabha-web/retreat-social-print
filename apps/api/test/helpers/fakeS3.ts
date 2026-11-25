@@ -22,6 +22,11 @@ export class FakeS3 {
         const o = this.objects.get(i.Key); if (!o) throw Object.assign(new Error("NotFound"), { name: "NotFound", $metadata: { httpStatusCode: 404 } });
         return { ContentLength: o.body.length };
       }
+      case "CopyObjectCommand": {
+        const src = decodeURIComponent(String(i.CopySource)); const key = src.slice(src.indexOf("/") + 1);
+        const o = this.objects.get(key); if (!o) throw Object.assign(new Error("The specified key does not exist."), { name: "NoSuchKey", $metadata: { httpStatusCode: 404 } });
+        this.objects.set(i.Key, { body: Buffer.from(o.body), contentType: o.contentType }); return {};
+      }
       case "DeleteObjectCommand": this.objects.delete(i.Key); return {};
       case "DeleteObjectsCommand":
         if (i.Delete.Objects.length > 1000) throw new Error("MalformedXML: more than 1000 keys");

@@ -20,7 +20,7 @@ class CloudRefused extends Error { constructor(public status: number, public cod
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const tokenId = (t: string) => sha(t).slice(0, 16);                        // lets status remember which event a token belongs to without storing the token
 
-function client(cfg: SyncConfig, token: string) {
+export function client(cfg: SyncConfig, token: string) {
   const f = cfg.fetchImpl ?? fetch;
   async function call(method: string, path: string, body?: unknown, extra: { raw?: Buffer; headers?: Record<string, string>; timeoutMs?: number } = {}) {
     let res: Response;
@@ -40,7 +40,19 @@ function client(cfg: SyncConfig, token: string) {
   return {
     ping: () => call("GET", "/api/v1/sync/ping") as Promise<{ eventId: string; name: string }>,
     check: (files: { key: string; size: number }[]) => call("POST", "/api/v1/sync/files/check", { files }) as Promise<{ missing: string[] }>,
-    putFile: (key: string, data: Buffer) => call("PUT", `/api/v1/sync/file?key=${encodeURIComponent(key)}`, undefined, { raw: data, headers: { "x-sha256": sha(data) }, timeoutMs: 300_000 }),
+    putFile: async (key: string, data: Buffer) => {
+      const plain = () => call("PUT", `/api/v1/sync/file?key=${encodeURIComponent(key)}`, undefined, { raw: data, headers: { "x-sha256": sha(data) }, timeoutMs: 300_000 });
+      const digest = sha(data);
+      let ask: { upload: { method: string; url: string; headers: Record<string, string> }; ticket: string };
+      try { ask = await call("POST", "/api/v1/sync/file/upload-url", { key, size: data.length, sha256: digest }); }
+      catch (e) { if (e instanceof CloudRefused && e.status === 501) return plain(); throw e; }      // the cloud keeps files on a disk: send them to it directly
+      // The file goes straight to the cloud's object storage; the cloud then checks the checksum before it is put in place.
+      let res: Response;
+      try { res = await f(ask.upload.url, { method: ask.upload.method, headers: ask.upload.headers, body: new Uint8Array(data), signal: AbortSignal.timeout(300_000) }); }
+      catch (e: any) { throw new CloudDown(e?.cause?.code ?? e?.name ?? "network"); }
+      if (!res.ok) { await res.arrayBuffer().catch(() => {}); if (res.status >= 500) throw new CloudDown(`storage_http_${res.status}`); throw new CloudRefused(res.status, "storage_refused"); }
+      return call("POST", "/api/v1/sync/file/confirm", { ticket: ask.ticket, key, sha256: digest });
+    },
     push: (payload: unknown) => call("POST", "/api/v1/sync/push", payload, { timeoutMs: 60_000 }) as Promise<{ ok: boolean }>,
   };
 }

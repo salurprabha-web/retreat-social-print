@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 const api = process.env.API_URL ?? "http://localhost:4100";
 const isProd = process.env.NODE_ENV === "production";
 const standalone = process.env.NEXT_STANDALONE === "1";
+// With object storage (Cloudflare R2) the phone uploads photos straight to the bucket, so the page must be allowed to connect there.
+// Set STORAGE_CONNECT_ORIGIN (build time) to the bucket's address, e.g. https://<account id>.r2.cloudflarestorage.com. Nothing else is opened.
+const storageOrigin = (process.env.STORAGE_CONNECT_ORIGIN ?? "").trim();
+if (storageOrigin && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(storageOrigin)) throw new Error("STORAGE_CONNECT_ORIGIN must look like https://host (no path, no wildcard)");
 
 /**
  * Browser-side protection for every page. The camera is allowed on our own pages only (guests take photos with it); everything else
@@ -12,7 +16,7 @@ const standalone = process.env.NEXT_STANDALONE === "1";
  */
 const csp = [
   "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "media-src 'self' blob:", "font-src 'self' data:",
-  "connect-src 'self'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'", "worker-src 'self' blob:",
+  `connect-src 'self'${storageOrigin ? " " + storageOrigin : ""}`, "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'", "worker-src 'self' blob:",
 ].join("; ");
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },

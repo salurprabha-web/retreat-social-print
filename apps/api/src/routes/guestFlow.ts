@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import sharp, { type Metadata } from "sharp";
 import { z } from "zod";
 import { MAX_UPLOADS_PER_SESSION, SHARE_CHANNELS, photoAdjustSchema, resolveShare, validateGuestInput, type FrameLayer, type PageDefinition } from "@rsp/shared";
@@ -7,10 +7,10 @@ import type { Pool } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
 import { requirePermission } from "../auth";
-import { deleteFile, getFile, putFile } from "../storage";
+import { copyFile, deleteFile, getFile, presignPut, putFile, statFile } from "../storage";
 import { config } from "../config";
 import { composeFrame, type SlotImage } from "../compose";
-import { signCompositionPath, verifyComposition } from "../signing";
+import { signCompositionPath, signUploadTicket, verifyComposition, verifyUploadTicket } from "../signing";
 import { finalizeComposition } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -72,17 +72,9 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (len > pe.maxUploadMb * 1024 * 1024) return reply.code(413).send({ error: "too_large", maxMb: pe.maxUploadMb });
   };
 
-  app.post("/api/v1/public/g/:token/photo", {
-    bodyLimit: MAX_BODY, onRequest: earlyLimit,
-    config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } },
-  }, async (req, reply) => {
-    const g = await authGuest(req, reply); if (!g) return;
-    const { pe, sessionId } = g;
-    const slotQ = z.coerce.number().int().min(1).max(8).safeParse((req.query as any).slot ?? 1);
-    if (!slotQ.success) return reply.code(400).send({ error: "bad_slot" });
-    const slot = slotQ.data;
-    const buf = req.body;
-    if (!Buffer.isBuffer(buf) || buf.length === 0) return reply.code(415).send({ error: "image_required" });
+  /** Validates a photo's bytes and records it. `place` stores the bytes and returns the storage key. Used by the plain and the direct upload routes alike. */
+  async function acceptPhoto(reply: FastifyReply, pe: PubEvent, sessionId: string, slot: number, buf: Buffer, place: (ext: string) => Promise<string>) {
+    if (buf.length === 0) return reply.code(415).send({ error: "image_required" });
     if (buf.length > pe.maxUploadMb * 1024 * 1024) return reply.code(413).send({ error: "too_large", maxMb: pe.maxUploadMb });
 
     // HEIC/HEIF: iPhones convert to JPEG automatically when picking from the gallery; a raw HEIC cannot be decoded here.
@@ -108,7 +100,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (used >= MAX_UPLOADS_PER_SESSION) return reply.code(429).send({ error: "too_many_uploads" });
 
     const lowRes = Math.max(width, height) < 1200;
-    const key = await putFile(`events/${pe.id}/originals`, ext, buf);
+    const key = await place(ext);
     let id: string;
     const old: string[] = [];
     try {
@@ -127,6 +119,59 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     } catch (e) { await deleteFile(key); throw e; }
     for (const k of old) await deleteFile(k);
     return reply.code(201).send({ uploadId: id, width, height, lowResolution: lowRes, bytes: buf.length });
+  }
+
+  app.post("/api/v1/public/g/:token/photo", {
+    bodyLimit: MAX_BODY, onRequest: earlyLimit,
+    config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
+    const g = await authGuest(req, reply); if (!g) return;
+    const { pe, sessionId } = g;
+    const slotQ = z.coerce.number().int().min(1).max(8).safeParse((req.query as any).slot ?? 1);
+    if (!slotQ.success) return reply.code(400).send({ error: "bad_slot" });
+    const slot = slotQ.data;
+    const buf = req.body;
+    if (!Buffer.isBuffer(buf) || buf.length === 0) return reply.code(415).send({ error: "image_required" });
+    return acceptPhoto(reply, pe, sessionId, slot, buf, (ext) => putFile(`events/${pe.id}/originals`, ext, buf));
+  });
+
+  // ---- Direct upload (Vercel/R2): the phone sends the file straight to object storage, because a serverless function cannot take a body over ~4.5 MB.
+  // 1) upload-url: checks the guest and the declared size, hands out a one-file signed address plus a signed ticket.
+  // 2) the browser PUTs the file to that address. 3) confirm: the server reads it back and applies EXACTLY the same checks as the direct route.
+  const directRate = { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } };
+  app.post("/api/v1/public/g/:token/photo/upload-url", { config: directRate }, async (req, reply) => {
+    const g = await authGuest(req, reply); if (!g) return;
+    const { pe, sessionId } = g;
+    const body = z.object({ bytes: z.number().int().min(1), slot: z.number().int().min(1).max(8).default(1) }).safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: "validation" });
+    if (body.data.bytes > pe.maxUploadMb * 1024 * 1024) return reply.code(413).send({ error: "too_large", maxMb: pe.maxUploadMb });
+    const used = (await pool.query("SELECT count(*)::int c FROM photo_uploads WHERE session_id=$1", [sessionId])).rows[0].c;
+    if (used >= MAX_UPLOADS_PER_SESSION) return reply.code(429).send({ error: "too_many_uploads" });
+    // One top-level folder for unfinished uploads, so a single storage lifecycle rule can delete abandoned ones.
+    const key = `incoming/${pe.id}/${randomBytes(16).toString("hex")}`;
+    const put = await presignPut(key, { expiresIn: config.directUrlTtlSeconds, contentType: "application/octet-stream", contentLength: body.data.bytes });
+    if (!put) return reply.code(501).send({ error: "direct_upload_unavailable" });   // local-disk storage: the client uses the plain upload route
+    const ticket = signUploadTicket({ e: pe.id, s: sessionId, slot: body.data.slot, k: key, n: body.data.bytes });
+    return { upload: { method: "PUT", url: put.url, headers: put.headers }, ticket, expiresInSeconds: config.directUrlTtlSeconds };
+  });
+
+  app.post("/api/v1/public/g/:token/photo/confirm", { config: directRate }, async (req, reply) => {
+    const g = await authGuest(req, reply); if (!g) return;
+    const { pe, sessionId } = g;
+    const t = verifyUploadTicket((req.body as any)?.ticket);
+    if (!t || t.e !== pe.id || t.s !== sessionId || !t.k.startsWith(`incoming/${pe.id}/`)) return reply.code(400).send({ error: "bad_ticket" });
+    const size = await statFile(t.k);
+    if (size === null) return reply.code(404).send({ error: "upload_not_found" });
+    // What arrived must be what was declared (the signed address also fixes the size) and within this event's limit.
+    if (size !== t.n || size > pe.maxUploadMb * 1024 * 1024) { await deleteFile(t.k); return reply.code(413).send({ error: "too_large", maxMb: pe.maxUploadMb }); }
+    const buf = await getFile(t.k);
+    try {
+      return await acceptPhoto(reply, pe, sessionId, t.slot, buf, async (ext) => {
+        const key = `events/${pe.id}/originals/${randomBytes(16).toString("hex")}.${ext}`;
+        await copyFile(t.k, key);
+        return key;
+      });
+    } finally { await deleteFile(t.k); }      // the unfinished copy never stays, whatever the outcome
   });
 
   app.put("/api/v1/public/g/:token/photo/:uploadId/adjust", { config: { rateLimit: { max: () => config.guestRateLimitPerMin, timeWindow: "1 minute" } } }, async (req, reply) => {

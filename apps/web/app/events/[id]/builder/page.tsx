@@ -97,7 +97,7 @@ function Builder({ me }: { me: Me }) {
     setErr("");
     const res = await fetch(`/api/v1/events/${id}/builder/asset`, { method: "POST", credentials: "same-origin", body: f,
       headers: { "content-type": f.type || "application/octet-stream", "x-rsp-csrf": (await api<{ csrf: string }>("/api/v1/auth/me")).csrf } });
-    if (!res.ok) { setErr("Upload failed: use a PNG, JPG, WebP or safe SVG under 5 MB."); return null; }
+    if (!res.ok) { setErr("Upload failed: use a PNG, JPG, WebP or safe SVG under 4 MB."); return null; }
     return (await res.json()).name as string;
   }
 

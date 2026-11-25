@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Readable } from "node:stream";
 import { config } from "./config";
-import { DiskBackend, s3FromSettings, checkKey, type StorageBackend, type PresignGetOptions } from "./storageBackends";
+import { DiskBackend, s3FromSettings, checkKey, type StorageBackend, type PresignGetOptions, type PresignPutOptions } from "./storageBackends";
 
 export type { StorageBackend } from "./storageBackends";
 export { S3Backend, DiskBackend } from "./storageBackends";
@@ -83,3 +83,9 @@ export const statFile = (key: string): Promise<number | null> => backend().stat(
 
 /** A short-lived direct address for a stored file, or null when the backend cannot make one (local disk): the caller then serves the bytes itself. */
 export const presignGet = (key: string, o: PresignGetOptions): Promise<string | null> => backend().presignGet(key, o);
+
+/** A short-lived address a browser can PUT a file to directly (size and type are signed). Null on local disk: the caller then accepts the bytes itself. */
+export const presignPut = (key: string, o: PresignPutOptions): Promise<{ url: string; headers: Record<string, string> } | null> => backend().presignPut(key, o);
+
+/** Copy a stored file to another key without moving its bytes through this process. */
+export const copyFile = (from: string, to: string): Promise<void> => backend().copy(from, to);

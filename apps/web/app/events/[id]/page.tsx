@@ -47,7 +47,7 @@ function Body({ me }: { me: Me }) {
       headers: { "content-type": f.type || "application/octet-stream", "x-rsp-csrf": (await api<{ csrf: string }>("/api/v1/auth/me")).csrf },
     });
     if (res.ok) { setMsg("Logo uploaded."); setLogoVer((v) => v + 1); await load(); }
-    else setErr(({ unsupported_image: "Use a PNG, JPG, WebP or SVG image.", unsafe_svg: "That SVG contains scripts or external references and was rejected.", unsupported: "Unsupported file." } as any)[(await res.json().catch(() => ({}))).error] ?? "Upload failed (max 5 MB).");
+    else setErr(({ unsupported_image: "Use a PNG, JPG, WebP or SVG image.", unsafe_svg: "That SVG contains scripts or external references and was rejected.", unsupported: "Unsupported file." } as any)[(await res.json().catch(() => ({}))).error] ?? "Upload failed (max 4 MB).");
   }
   async function duplicate() {
     try { const r = await api<{ event: { id: string } }>(`/api/v1/events/${id}/duplicate`, { method: "POST" }); window.location.href = `/events/${r.event.id}`; } catch (x: any) { setErr(x.message); }

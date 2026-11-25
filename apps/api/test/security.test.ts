@@ -63,7 +63,7 @@ const PUBLIC_ALLOWLIST = [
   "GET /api/v1/public/w/:token/sponsor/:id/logo", "GET /api/v1/public/w/:token/stream",
   "POST /api/v1/agent/register", "POST /api/v1/auth/login",
   "POST /api/v1/public/g/:token/compose", "POST /api/v1/public/g/:token/composition/:cid/finalize", "POST /api/v1/public/g/:token/composition/:cid/share",
-  "POST /api/v1/public/g/:token/photo", "POST /api/v1/public/g/:token/session", "POST /api/v1/public/w/:token/shown",
+  "POST /api/v1/public/g/:token/photo", "POST /api/v1/public/g/:token/photo/confirm", "POST /api/v1/public/g/:token/photo/upload-url", "POST /api/v1/public/g/:token/session", "POST /api/v1/public/w/:token/shown",
   "PUT /api/v1/public/g/:token/photo/:uploadId/adjust",
 ].sort();
 

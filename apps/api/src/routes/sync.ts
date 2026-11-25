@@ -7,7 +7,8 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { requirePermission, requireUser, tagAuth } from "../auth";
 import { config } from "../config";
-import { deleteFile, statFile, writeStable } from "../storage";
+import { copyFile, deleteFile, listFiles, presignGet, presignPut, putFile, statFile, storageKind, streamFile, writeStable } from "../storage";
+import { signUploadTicket, verifyUploadTicket } from "../signing";
 import { notifyWall } from "../wallBus";
 import { notifyPrint } from "../printService";
 import { wallImageKeys } from "./wall";
@@ -136,7 +137,16 @@ export async function syncRoutes(app: FastifyInstance, pool: Pool) {
     const pkg = await buildPackage(pool, eventId);
     if (!pkg) return reply.code(404).send({ error: "not_found" });
     await audit(pool, req.user!.id, "offline_package_export", { eventId, entity: "event", entityId: eventId, detail: { files: pkg.manifest.files.length, bytes: pkg.buffer.length }, ip: req.ip });
-    reply.header("Content-Disposition", `attachment; filename="event-${eventId.slice(0, 8)}.rspkg"`);
+    const name = `event-${eventId.slice(0, 8)}.rspkg`;
+    // On object storage the package (up to 200 MB) is saved there and the browser is sent to a short-lived signed download address:
+    // a serverless response cannot carry that much. One package per event is kept; a new export replaces the previous one.
+    if (storageKind() === "s3") {
+      for (const old of await listFiles(`exports/${eventId}`)) await deleteFile(`exports/${eventId}/${old}`);
+      const key = await putFile(`exports/${eventId}`, "rspkg", pkg.buffer);
+      const url = await presignGet(key, { expiresIn: config.directUrlTtlSeconds, filename: name, contentType: "application/octet-stream" });
+      if (url) return reply.redirect(url, 302);
+    }
+    reply.header("Content-Disposition", `attachment; filename="${name}"`);
     return reply.type("application/octet-stream").send(pkg.buffer);
   });
 
@@ -162,6 +172,37 @@ export async function syncRoutes(app: FastifyInstance, pool: Pool) {
     if (createHash("sha256").update(body).digest("hex") !== want) return reply.code(422).send({ error: "checksum_mismatch" });   // damaged in transit: never stored
     await writeStable(key, body);
     return reply.code(201).send({ ok: true });
+  });
+
+  // Direct file delivery (cloud on object storage): files can be far larger than a serverless request body, so the local server sends each one
+  // straight to the bucket with a one-file signed address and then asks us to check its checksum and put it in place.
+  app.post("/api/v1/sync/file/upload-url", { preHandler: auth, config: limit }, async (req, reply) => {
+    const eventId = req.sync!.eventId;
+    const b = z.object({ key: z.string().max(300), size: z.number().int().min(1).max(SYNC_MAX_FILE_BYTES), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).safeParse(req.body ?? {});
+    if (!b.success) return reply.code(400).send({ error: "validation" });
+    if (!syncFileKeyOk(eventId, b.data.key)) return reply.code(422).send({ error: "bad_file_key" });
+    const tmp = `incoming/${eventId}/${randomBytes(16).toString("hex")}`;
+    const put = await presignPut(tmp, { expiresIn: Math.max(config.directUrlTtlSeconds, 900), contentType: "application/octet-stream", contentLength: b.data.size });
+    if (!put) return reply.code(501).send({ error: "direct_upload_unavailable" });
+    return { upload: { method: "PUT", url: put.url, headers: put.headers }, ticket: signUploadTicket({ e: eventId, s: req.sync!.id, slot: 0, k: tmp, n: b.data.size }, 1800) };
+  });
+
+  app.post("/api/v1/sync/file/confirm", { preHandler: auth, config: limit }, async (req, reply) => {
+    const eventId = req.sync!.eventId;
+    const b = z.object({ ticket: z.string().max(1024), key: z.string().max(300), sha256: z.string().regex(/^[0-9a-f]{64}$/) }).safeParse(req.body ?? {});
+    if (!b.success) return reply.code(400).send({ error: "validation" });
+    const t = verifyUploadTicket(b.data.ticket);
+    if (!t || t.e !== eventId || t.s !== req.sync!.id || !t.k.startsWith(`incoming/${eventId}/`)) return reply.code(400).send({ error: "bad_ticket" });
+    if (!syncFileKeyOk(eventId, b.data.key)) return reply.code(422).send({ error: "bad_file_key" });
+    const size = await statFile(t.k);
+    if (size === null) return reply.code(404).send({ error: "upload_not_found" });
+    try {
+      if (size !== t.n) return reply.code(413).send({ error: "size_mismatch" });
+      const h = createHash("sha256"); for await (const chunk of streamFile(t.k)) h.update(chunk as Buffer);
+      if (h.digest("hex") !== b.data.sha256) return reply.code(422).send({ error: "checksum_mismatch" });     // damaged in transit: never stored
+      await copyFile(t.k, b.data.key);
+      return reply.code(201).send({ ok: true });
+    } finally { await deleteFile(t.k).catch(() => {}); }
   });
 
   app.post("/api/v1/sync/push", { preHandler: auth, bodyLimit: 16 * 1024 * 1024, config: limit }, async (req, reply) => {

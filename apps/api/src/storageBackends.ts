@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import path from "node:path";
 import { PassThrough, type Readable } from "node:stream";
 import {
-  S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command,
+  S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand, ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -25,7 +25,12 @@ export interface StorageBackend {
   stat(key: string): Promise<number | null>;
   /** A short-lived address the browser can fetch directly from the store. Null when the backend cannot (disk). */
   presignGet(key: string, o: PresignGetOptions): Promise<string | null>;
+  /** A short-lived address the browser can PUT a file to directly. The size and type are part of the signature. Null when the backend cannot (disk). */
+  presignPut(key: string, o: PresignPutOptions): Promise<{ url: string; headers: Record<string, string> } | null>;
+  /** Server-side copy inside the store (no bytes pass through this process). */
+  copy(from: string, to: string): Promise<void>;
 }
+export interface PresignPutOptions { expiresIn: number; contentType: string; contentLength: number }
 
 /** Keys are made by the server, but they are validated anyway: no traversal, no empty parts, no control characters. */
 export function checkKey(key: string): string {
@@ -53,6 +58,8 @@ export class DiskBackend implements StorageBackend {
   async list(prefix: string) { try { return (await fs.readdir(this.resolve(prefix), { withFileTypes: true })).filter((d) => d.isFile()).map((d) => d.name); } catch { return []; } }
   async stat(key: string) { try { return (await fs.stat(this.resolve(key))).size; } catch { return null; } }
   async presignGet() { return null; }
+  async presignPut() { return null; }
+  async copy(from: string, to: string) { const t = this.resolve(to); await fs.mkdir(path.dirname(t), { recursive: true }); await fs.copyFile(this.resolve(from), t); }
 }
 
 /* ---------- S3-compatible ---------- */
@@ -113,6 +120,15 @@ export class S3Backend implements StorageBackend {
   async stat(key: string) {
     try { return Number((await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.k(key) }))).ContentLength ?? 0); }
     catch (e: any) { if (isMissing(e)) return null; throw e; }
+  }
+  async copy(from: string, to: string) {
+    try { await this.client.send(new CopyObjectCommand({ Bucket: this.bucket, Key: this.k(to), CopySource: encodeURIComponent(this.bucket + "/" + this.k(from)).replace(/%2F/g, "/") })); }
+    catch (e: any) { if (isMissing(e)) throw missing(from); throw e; }
+  }
+  async presignPut(key: string, o: PresignPutOptions) {
+    const url = await getSignedUrl(this.signer, new PutObjectCommand({ Bucket: this.bucket, Key: this.k(key), ContentType: o.contentType, ContentLength: o.contentLength }),
+      { expiresIn: o.expiresIn, signableHeaders: new Set(["content-type", "content-length"]) });
+    return { url, headers: { "Content-Type": o.contentType } };
   }
   async presignGet(key: string, o: PresignGetOptions) {
     return getSignedUrl(this.signer, new GetObjectCommand({

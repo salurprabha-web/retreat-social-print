@@ -42,7 +42,44 @@ export async function prepare(file: Blob, maxBytes: number): Promise<Blob> {
 
 export interface UploadResult { uploadId: string; width: number; height: number; lowResolution: boolean }
 
-export function uploadPhoto(token: string, sessionId: string, blob: Blob, onProgress: (pct: number) => void, slot = 1): Promise<UploadResult> {
+const failure = (status: number, body: any) => {
+  const code = status === 429 && !body?.error?.startsWith("too_many") ? "rate_limited" : body?.error ?? "network";
+  return new PhotoError(code, FRIENDLY[code] ?? "Upload failed. Please try again.");
+};
+
+async function postJson(url: string, sessionId: string, payload: unknown): Promise<{ status: number; body: any }> {
+  let res: Response;
+  try { res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-guest-session": sessionId }, body: JSON.stringify(payload) }); }
+  catch { throw new PhotoError("network", FRIENDLY.network); }
+  let body: any = {}; try { body = await res.json(); } catch { /* ignore */ }
+  return { status: res.status, body };
+}
+
+/**
+ * Uploads the photo. Where the server keeps files in object storage (the Vercel deployment) the phone sends the file straight there with a
+ * one-file signed address and the server then checks it ("confirm"); otherwise (local-disk servers answer 501) the plain upload is used.
+ */
+export async function uploadPhoto(token: string, sessionId: string, blob: Blob, onProgress: (pct: number) => void, slot = 1): Promise<UploadResult> {
+  const base = `/api/v1/public/g/${token}/photo`;
+  const ask = await postJson(`${base}/upload-url`, sessionId, { bytes: blob.size, slot });
+  if (ask.status === 501) return uploadPlain(token, sessionId, blob, onProgress, slot);
+  if (ask.status !== 200) throw failure(ask.status, ask.body);
+  await new Promise<void>((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open(ask.body.upload.method, ask.body.upload.url);
+    for (const [k, v] of Object.entries(ask.body.upload.headers as Record<string, string>)) x.setRequestHeader(k, v);
+    x.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    x.onerror = () => reject(new PhotoError("network", FRIENDLY.network));
+    x.ontimeout = x.onerror; x.timeout = 10 * 60 * 1000;
+    x.onload = () => (x.status >= 200 && x.status < 300 ? resolve() : reject(new PhotoError("network", FRIENDLY.network)));
+    x.send(blob);
+  });
+  const done = await postJson(`${base}/confirm`, sessionId, { ticket: ask.body.ticket });
+  if (done.status >= 200 && done.status < 300) return done.body as UploadResult;
+  throw failure(done.status, done.body);
+}
+
+function uploadPlain(token: string, sessionId: string, blob: Blob, onProgress: (pct: number) => void, slot = 1): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
     x.open("POST", `/api/v1/public/g/${token}/photo?slot=${slot}`);

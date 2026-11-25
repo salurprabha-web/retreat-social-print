@@ -67,7 +67,7 @@ async function createEvent(tx: any, userId: string, v: { name: string; clientNam
 export async function eventRoutes(app: FastifyInstance, pool: Pool) {
   // Images arrive as the raw request body; the type is verified from the bytes, not from this header.
   for (const t of ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]) {
-    app.addContentTypeParser(t, { parseAs: "buffer", bodyLimit: 5 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+    app.addContentTypeParser(t, { parseAs: "buffer", bodyLimit: 4 * 1024 * 1024 }, (_req, body, done) => done(null, body));
   }
 
   async function load(id: string) {

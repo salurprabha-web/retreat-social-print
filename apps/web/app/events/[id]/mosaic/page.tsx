@@ -10,6 +10,7 @@ interface Loaded { settings: MosaicSettings; token: string; path: string; master
 const ERR: Record<string, string> = {
   validation: "Some values are out of range. Check the limits shown.", unsupported_image: "Use a JPG, PNG or WebP photo (not SVG).",
   too_large: "The master image must be under 25 MB.", master_too_small: "The master image must be at least 200 pixels on its short side.", image_required: "Choose an image file.",
+  network: "The upload did not go through. Check the connection and try again.", upload_not_found: "The upload did not arrive. Try again.", bad_ticket: "The upload expired. Try again.",
 };
 const POS: Record<string, string> = { none: "No logo", center: "Centre", "top-left": "Top left", "top-right": "Top right", "bottom-left": "Bottom left", "bottom-right": "Bottom right" };
 
@@ -39,6 +40,18 @@ function Body({ me }: { me: Me }) {
     if (!file) return;
     if (d!.stats.filled > 0 && !confirm("A new master image places every picture again. Continue?")) return;
     await run(async () => {
+      // Object storage (the Vercel deployment): send the file straight to the bucket, then ask the server to check and install it.
+      // Local-disk servers answer 501 and take the file themselves.
+      let ask: { upload: { method: string; url: string; headers: Record<string, string> }; ticket: string } | null = null;
+      try { ask = await api(`/api/v1/events/${id}/mosaic/master/upload-url`, { method: "POST", body: { bytes: file.size } }); }
+      catch (e: any) { if (e.message !== "direct_upload_unavailable") throw e; }
+      if (ask) {
+        let put: Response;
+        try { put = await fetch(ask.upload.url, { method: ask.upload.method, headers: ask.upload.headers, body: file }); } catch { throw new Error("network"); }
+        if (!put.ok) throw new Error("network");
+        await api(`/api/v1/events/${id}/mosaic/master/confirm`, { method: "POST", body: { ticket: ask.ticket } });
+        return;
+      }
       const csrf = (await api<{ csrf: string }>("/api/v1/auth/me")).csrf;
       const res = await fetch(`/api/v1/events/${id}/mosaic/master`, { method: "POST", credentials: "same-origin", body: file, headers: { "content-type": "application/octet-stream", "x-rsp-csrf": csrf } });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);

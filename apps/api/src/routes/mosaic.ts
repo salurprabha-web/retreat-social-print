@@ -8,7 +8,8 @@ import { withTx } from "../db";
 import { audit } from "../audit";
 import { requirePermission } from "../auth";
 import { config } from "../config";
-import { deleteFile, getFile, putFile, sniffImage } from "../storage";
+import { copyFile, deleteFile, getFile, presignPut, putFile, sniffImage, statFile } from "../storage";
+import { signUploadTicket, verifyUploadTicket } from "../signing";
 import { notifyWall, wallBus } from "../wallBus";
 import { clearTiles, currentVersion, ensureProject, renderCurrent, setGrid, syncMosaic, type Project } from "../mosaicService";
 
@@ -55,10 +56,9 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     return describe(fresh, enabled);
   });
 
-  app.post("/api/v1/events/:eventId/mosaic/master", { preHandler: edit, bodyLimit: MAX_MASTER_BYTES + 1024 }, async (req, reply) => {
-    const eventId = (req.params as any).eventId as string;
-    const body = req.body;
-    if (!Buffer.isBuffer(body) || body.length === 0) return reply.code(415).send({ error: "image_required" });
+  /** Validates a master image and installs it. `place` stores the bytes and returns the key. Shared by the plain and the direct upload routes. */
+  async function installMaster(req: any, reply: any, eventId: string, body: Buffer, place: (ext: string) => Promise<string>) {
+    if (body.length === 0) return reply.code(415).send({ error: "image_required" });
     if (body.length > MAX_MASTER_BYTES) return reply.code(413).send({ error: "too_large", maxMb: 25 });
     const t = sniffImage(body);
     if (!t || t.ext === "svg") return reply.code(415).send({ error: "unsupported_image" });          // a master must be a photo-like raster
@@ -68,13 +68,50 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
       await sharp(body, { limitInputPixels: 100_000_000 }).resize(16, 16, { fit: "inside" }).raw().toBuffer();   // proves it fully decodes
     } catch { return reply.code(415).send({ error: "unsupported_image" }); }
     const p = await ensureProject(pool, eventId);
-    const key = await putFile(`events/${eventId}/mosaic`, t.ext, body);
+    const key = await place(t.ext);
     try { await setGrid(pool, eventId, body, resolveMosaicSettings(p.settings).tileTarget, key); }
     catch (e) { await deleteFile(key).catch(() => {}); throw e; }
     if (p.master_storage_key) await deleteFile(p.master_storage_key).catch(() => {});
     await audit(pool, req.user!.id, "mosaic_master", { eventId, entity: "mosaic", detail: { bytes: body.length, type: t.ext }, ip: req.ip });
     notifyWall(eventId);
     return reply.code(201).send(await describe(await ensureProject(pool, eventId), (await ensureProject(pool, eventId)).enabled));
+  }
+
+  app.post("/api/v1/events/:eventId/mosaic/master", { preHandler: edit, bodyLimit: MAX_MASTER_BYTES + 1024 }, async (req, reply) => {
+    const eventId = (req.params as any).eventId as string;
+    const body = req.body;
+    if (!Buffer.isBuffer(body)) return reply.code(415).send({ error: "image_required" });
+    return installMaster(req, reply, eventId, body, (ext) => putFile(`events/${eventId}/mosaic`, ext, body));
+  });
+
+  // Direct upload (object storage): the browser sends the master straight to the bucket, then asks the server to check and install it.
+  app.post("/api/v1/events/:eventId/mosaic/master/upload-url", { preHandler: edit }, async (req, reply) => {
+    const eventId = (req.params as any).eventId as string;
+    const body = z.object({ bytes: z.number().int().min(1) }).safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: "validation" });
+    if (body.data.bytes > MAX_MASTER_BYTES) return reply.code(413).send({ error: "too_large", maxMb: 25 });
+    const key = `incoming/${eventId}/${randomBytes(16).toString("hex")}`;
+    const put = await presignPut(key, { expiresIn: config.directUrlTtlSeconds, contentType: "application/octet-stream", contentLength: body.data.bytes });
+    if (!put) return reply.code(501).send({ error: "direct_upload_unavailable" });
+    const ticket = signUploadTicket({ e: eventId, s: req.user!.id, slot: 0, k: key, n: body.data.bytes });
+    return { upload: { method: "PUT", url: put.url, headers: put.headers }, ticket, expiresInSeconds: config.directUrlTtlSeconds };
+  });
+
+  app.post("/api/v1/events/:eventId/mosaic/master/confirm", { preHandler: edit }, async (req, reply) => {
+    const eventId = (req.params as any).eventId as string;
+    const t = verifyUploadTicket((req.body as any)?.ticket);
+    if (!t || t.e !== eventId || t.s !== req.user!.id || !t.k.startsWith(`incoming/${eventId}/`)) return reply.code(400).send({ error: "bad_ticket" });
+    const size = await statFile(t.k);
+    if (size === null) return reply.code(404).send({ error: "upload_not_found" });
+    if (size !== t.n || size > MAX_MASTER_BYTES) { await deleteFile(t.k); return reply.code(413).send({ error: "too_large", maxMb: 25 }); }
+    const buf = await getFile(t.k);
+    try {
+      return await installMaster(req, reply, eventId, buf, async (ext) => {
+        const key = `events/${eventId}/mosaic/${randomBytes(16).toString("hex")}.${ext}`;
+        await copyFile(t.k, key);
+        return key;
+      });
+    } finally { await deleteFile(t.k); }
   });
 
   app.get("/api/v1/events/:eventId/mosaic/master", { preHandler: view }, async (req, reply) => {
