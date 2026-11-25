@@ -10,6 +10,7 @@ import { S3Backend, DiskBackend } from "../src/storageBackends";
 import { FakeS3 } from "./helpers/fakeS3";
 
 // The cloud side of the offline sync on object storage (in-memory stand-in): signed file delivery and package export.
+(globalThis as any).__rspNoFollow = true;   // these suites look at the redirects themselves
 const fake = new FakeS3();
 const signer = new S3Client({ region: "auto", endpoint: "https://acct.r2.cloudflarestorage.com", credentials: { accessKeyId: "AKIATEST", secretAccessKey: "secret" } });
 const s3 = () => new S3Backend(fake, "bkt", "", signer);

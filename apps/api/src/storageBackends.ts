@@ -2,6 +2,9 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { PassThrough, type Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { createWriteStream } from "node:fs";
+import { Upload } from "@aws-sdk/lib-storage";
 import {
   S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand, ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
@@ -27,6 +30,8 @@ export interface StorageBackend {
   presignGet(key: string, o: PresignGetOptions): Promise<string | null>;
   /** A short-lived address the browser can PUT a file to directly. The size and type are part of the signature. Null when the backend cannot (disk). */
   presignPut(key: string, o: PresignPutOptions): Promise<{ url: string; headers: Record<string, string> } | null>;
+  /** Stores a stream of any size without holding it in memory (large exports). */
+  putStream(key: string, data: Readable): Promise<void>;
   /** Server-side copy inside the store (no bytes pass through this process). */
   copy(from: string, to: string): Promise<void>;
 }
@@ -59,6 +64,7 @@ export class DiskBackend implements StorageBackend {
   async stat(key: string) { try { return (await fs.stat(this.resolve(key))).size; } catch { return null; } }
   async presignGet() { return null; }
   async presignPut() { return null; }
+  async putStream(key: string, data: Readable) { const p = this.resolve(key); await fs.mkdir(path.dirname(p), { recursive: true }); await pipeline(data, createWriteStream(p)); }
   async copy(from: string, to: string) { const t = this.resolve(to); await fs.mkdir(path.dirname(t), { recursive: true }); await fs.copyFile(this.resolve(from), t); }
 }
 
@@ -94,10 +100,20 @@ export class S3Backend implements StorageBackend {
       for (const o of r.Contents ?? []) keys.push(o.Key);
       token = r.IsTruncated ? r.NextContinuationToken : undefined;
     } while (token);
+    // Batches of up to 1000. Some S3-compatible stores refuse the batch call (it needs a checksum header they may not accept), so whatever the
+    // batch did not delete is deleted one object at a time: slower, but it works everywhere.
     for (let i = 0; i < keys.length; i += 1000) {
-      await this.client.send(new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })), Quiet: true } }));
+      const chunk = keys.slice(i, i + 1000);
+      try {
+        const r = await this.client.send(new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true } }));
+        const failed: string[] = (r?.Errors ?? []).map((e: any) => e.Key);
+        if (failed.length) await this.deleteEach(failed);
+      } catch { await this.deleteEach(chunk); }
     }
     await this.delete(prefix);      // the prefix may itself be a single file
+  }
+  private async deleteEach(keys: string[]) {
+    for (let i = 0; i < keys.length; i += 25) await Promise.all(keys.slice(i, i + 25).map((Key) => this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key }))));
   }
   stream(key: string) {
     const out = new PassThrough();
@@ -120,6 +136,13 @@ export class S3Backend implements StorageBackend {
   async stat(key: string) {
     try { return Number((await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.k(key) }))).ContentLength ?? 0); }
     catch (e: any) { if (isMissing(e)) return null; throw e; }
+  }
+  async putStream(key: string, data: Readable) {
+    // Multipart upload: parts of 8 MB are sent as the stream produces them, so memory stays small however large the file is.
+    // Some stream libraries (archiver) use their own stream classes, which the uploader does not recognise: hand it a standard Node stream.
+    const body = new PassThrough();
+    data.on("error", (e: Error) => body.destroy(e)); data.pipe(body);
+    await new Upload({ client: this.client as S3Client, params: { Bucket: this.bucket, Key: this.k(key), Body: body, ContentType: mimeOf(key) }, partSize: 8 * 1024 * 1024, queueSize: 3, leavePartsOnError: false }).done();
   }
   async copy(from: string, to: string) {
     try { await this.client.send(new CopyObjectCommand({ Bucket: this.bucket, Key: this.k(to), CopySource: encodeURIComponent(this.bucket + "/" + this.k(from)).replace(/%2F/g, "/") })); }

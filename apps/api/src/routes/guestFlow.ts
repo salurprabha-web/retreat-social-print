@@ -12,6 +12,7 @@ import { config } from "../config";
 import { composeFrame, type SlotImage } from "../compose";
 import { signCompositionPath, signUploadTicket, verifyComposition, verifyUploadTicket } from "../signing";
 import { finalizeComposition } from "../printService";
+import { sendStored } from "../serve";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // no 0/O/1/I: read aloud at an event desk
@@ -299,10 +300,8 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (!UUID.test(cid) || !verifyComposition(cid, q.exp, q.sig)) return reply.code(404).send({ error: "not_found" });
     const c = (await pool.query("SELECT storage_key,mime FROM final_compositions WHERE id=$1 AND deleted_at IS NULL", [cid])).rows[0];
     if (!c) return reply.code(404).send({ error: "not_found" });
-    reply.header("Content-Type", c.mime);
-    reply.header("Content-Disposition", q.dl === "1" ? 'attachment; filename="photo.jpg"' : "inline");
     reply.header("X-Robots-Tag", "noindex");
-    return reply.send(await getFile(c.storage_key));
+    return sendStored(reply, c.storage_key, { mime: c.mime, filename: q.dl === "1" ? "photo.jpg" : undefined, inline: q.dl !== "1" });
   });
 
   // Staff list/detail/moderation live in routes/photos.ts. The raw image routes stay here beside the originals.
@@ -311,8 +310,7 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
     if (!UUID.test(cid)) return reply.code(404).send({ error: "not_found" });
     const c = (await pool.query("SELECT storage_key,mime FROM final_compositions WHERE id=$1 AND event_id=$2 AND deleted_at IS NULL", [cid, eventId])).rows[0];
     if (!c) return reply.code(404).send({ error: "not_found" });
-    reply.header("Content-Type", c.mime);
-    return reply.send(await getFile(c.storage_key));
+    return sendStored(reply, c.storage_key, { mime: c.mime });
   });
 
   // Operators/managers of THIS event can open an original. There is no public route to photos.
@@ -323,8 +321,6 @@ export async function guestFlowRoutes(app: FastifyInstance, pool: Pool) {
       const u = (await pool.query("SELECT storage_key,mime FROM photo_uploads WHERE id=$1 AND event_id=$2 AND deleted_at IS NULL", [uploadId, eventId])).rows[0];
       if (!u) return reply.code(404).send({ error: "not_found" });
       await audit(pool, req.user!.id, "photo_original_view", { eventId, entity: "photo", entityId: uploadId, ip: req.ip });
-      reply.header("Content-Type", u.mime);
-      reply.header("Content-Disposition", "inline");
-      return reply.send(await getFile(u.storage_key));
+      return sendStored(reply, u.storage_key, { mime: u.mime, inline: true });
     });
 }

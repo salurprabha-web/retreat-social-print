@@ -1,10 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const api = process.env.API_URL ?? "http://localhost:4100";
+// Where the API lives. Hosted on Vercel the API runs inside this same project (app/api/[...path]/route.ts), so nothing is forwarded.
+// Anywhere else /api is forwarded to the API process (API_URL, default: the local development API).
+const onVercel = !!process.env.VERCEL;
+const api = process.env.API_URL ?? (onVercel ? "" : "http://localhost:4100");
 const isProd = process.env.NODE_ENV === "production";
 const standalone = process.env.NEXT_STANDALONE === "1";
-// With object storage (Cloudflare R2) the phone uploads photos straight to the bucket, so the page must be allowed to connect there.
+// With object storage (Cloudflare R2) the phone uploads photos straight to the bucket and pictures are shown from signed storage addresses, so the page must be allowed to connect to it and load images from it.
 // Set STORAGE_CONNECT_ORIGIN (build time) to the bucket's address, e.g. https://<account id>.r2.cloudflarestorage.com. Nothing else is opened.
 const storageOrigin = (process.env.STORAGE_CONNECT_ORIGIN ?? "").trim();
 if (storageOrigin && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(storageOrigin)) throw new Error("STORAGE_CONNECT_ORIGIN must look like https://host (no path, no wildcard)");
@@ -15,7 +18,7 @@ if (storageOrigin && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(storageOrigin)) thr
  * server needs eval and web sockets). Scripts and styles still allow 'unsafe-inline' because Next.js writes inline bootstrap data.
  */
 const csp = [
-  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "media-src 'self' blob:", "font-src 'self' data:",
+  "default-src 'self'", "script-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline'", `img-src 'self' data: blob:${storageOrigin ? " " + storageOrigin : ""}`, "media-src 'self' blob:", "font-src 'self' data:",
   `connect-src 'self'${storageOrigin ? " " + storageOrigin : ""}`, "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'", "object-src 'none'", "worker-src 'self' blob:",
 ].join("; ");
 const securityHeaders = [
@@ -32,13 +35,22 @@ export default {
   ...(standalone ? { output: "standalone", outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), "../..") } : {}),
   poweredByHeader: false,
   transpilePackages: ["@rsp/shared"],
+  // The API is loaded as it was built (apps/api/dist) and its native libraries stay native; Next copies what they need into the function.
+  serverExternalPackages: ["@rsp/api", "sharp", "@napi-rs/canvas", "@node-rs/argon2", "pdfkit", "archiver", "pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
+  // Files the API reads by name at run time (so a static trace cannot see them): the fonts the picture engine draws with.
+  outputFileTracingIncludes: {
+    "/api/**": ["../api/node_modules/@fontsource/*/files/*.woff"],
+  },
   compress: false,   // gzip would buffer the live (SSE) print stream; compression belongs to the reverse proxy
   async headers() { return [{ source: "/:path*", headers: securityHeaders }]; },
   async rewrites() {
     return [
-      { source: "/api/:path*", destination: `${api}/api/:path*` },
-      // What a scanned QR code opens: the API counts the scan and redirects to the guest page.
-      { source: "/q/:code", destination: `${api}/api/v1/public/q/:code` },
+      // Only when the API runs as its own process; hosted on Vercel the route handlers in app/api and app/q reach it directly.
+      ...(api ? [
+        { source: "/api/:path*", destination: `${api}/api/:path*` },
+        // What a scanned QR code opens: the API counts the scan and redirects to the guest page.
+        { source: "/q/:code", destination: `${api}/api/v1/public/q/:code` },
+      ] : []),
     ];
   },
 };

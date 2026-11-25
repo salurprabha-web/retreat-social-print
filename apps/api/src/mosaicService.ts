@@ -164,13 +164,13 @@ async function draw(opts: {
 const inflight = new Map<string, Promise<Buffer>>();
 
 /** The current mosaic as a JPEG `width` pixels wide. Cached per picture-set; concurrent requests share one render. */
-export async function renderCurrent(pool: Pool, eventId: string, width: number): Promise<{ buffer: Buffer; version: string; width: number; height: number } | null> {
+export async function renderCurrent(pool: Pool, eventId: string, width: number): Promise<{ buffer: Buffer; key: string; version: string; width: number; height: number } | null> {
   const p = await loadProject(pool, eventId);
   if (!p?.master_storage_key || !p.cols || !p.rows || !p.master_width || !p.master_height) return null;
   const v = await currentVersion(pool, p);
   const size = mosaicOutputSize(p.master_width, p.master_height, width);
   const key = `${renderDir(eventId)}/${v.version}-${size.width}.jpg`;
-  try { return { buffer: await getFile(key), version: v.version, ...size }; } catch { /* not rendered yet */ }
+  try { return { buffer: await getFile(key), key, version: v.version, ...size }; } catch { /* not rendered yet */ }
   let job = inflight.get(key);
   if (!job) {
     job = (async () => {
@@ -186,5 +186,5 @@ export async function renderCurrent(pool: Pool, eventId: string, width: number):
     })().finally(() => inflight.delete(key));
     inflight.set(key, job);
   }
-  return { buffer: await job, version: v.version, ...size };
+  return { buffer: await job, key, version: v.version, ...size };
 }

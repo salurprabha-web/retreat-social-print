@@ -14,3 +14,4 @@ dist/
 .next-local
 deploy/.env
 deploy/backups/
+.next-vercel

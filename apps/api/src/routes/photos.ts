@@ -6,7 +6,8 @@ import type { Pool, Tx } from "../db";
 import { withTx } from "../db";
 import { audit } from "../audit";
 import { can, requirePermission } from "../auth";
-import { deleteFile, getFile, putFile, streamFile } from "../storage";
+import { deleteFile, getFile, listFiles, newKey, putFile, putStream, storageKind, streamFile } from "../storage";
+import { sendStored } from "../serve";
 import { wallImageKeys } from "./wall";
 import { mosaicTileKey } from "../mosaicService";
 import { cancelJobsForCompositions } from "../printService";
@@ -220,6 +221,14 @@ export async function photoRoutes(app: FastifyInstance, pool: Pool) {
     zip.on("error", (e: Error) => req.log?.error?.(e));
     rows.forEach((r, i) => zip.append(streamFile(r.storage_key), { name: `${String(i + 1).padStart(4, "0")}-${r.guest_code ?? "guest"}-${String(r.id).slice(0, 8)}.jpg` }));
     void zip.finalize();
+    // On object storage the archive is written there as it is made (no size limit in memory, no response size limit) and the browser is sent
+    // to a short-lived signed download address. One export per event is kept; a new one replaces the previous.
+    if (storageKind() === "s3") {
+      const key = newKey(`exports/${eventId}`, "zip");
+      for (const old of await listFiles(`exports/${eventId}`)) await deleteFile(`exports/${eventId}/${old}`);
+      await putStream(key, zip);
+      return sendStored(reply, key, { mime: "application/zip", filename: "photos.zip" });
+    }
     reply.header("Content-Type", "application/zip");
     reply.header("Content-Disposition", 'attachment; filename="photos.zip"');
     return reply.send(zip);

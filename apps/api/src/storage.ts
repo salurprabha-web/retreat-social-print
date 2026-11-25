@@ -89,3 +89,9 @@ export const presignPut = (key: string, o: PresignPutOptions): Promise<{ url: st
 
 /** Copy a stored file to another key without moving its bytes through this process. */
 export const copyFile = (from: string, to: string): Promise<void> => backend().copy(from, to);
+
+/** A new random storage key under a folder (the file itself is written separately, e.g. with putStream). */
+export const newKey = (prefix: string, ext: string): string => `${checkKey(prefix)}/${randomBytes(16).toString("hex")}.${ext}`;
+
+/** Stores a stream of any size without holding it in memory. */
+export const putStream = (key: string, data: Readable): Promise<void> => backend().putStream(key, data);

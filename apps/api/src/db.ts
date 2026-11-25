@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 export type Pool = pg.Pool;
 export type Tx = pg.PoolClient;
 
-export function createPool(connectionString: string): Pool {
-  const pool = new pg.Pool({ connectionString, max: 20 });
+export function createPool(connectionString: string, opts: { max?: number; idleMs?: number; connectMs?: number } = {}): Pool {
+  const pool = new pg.Pool({ connectionString, max: opts.max ?? 20, ...(opts.idleMs ? { idleTimeoutMillis: opts.idleMs } : {}), ...(opts.connectMs ? { connectionTimeoutMillis: opts.connectMs } : {}) });
   // An idle connection can be dropped at any time (database restart, network blip). Without this handler Node treats
   // the pool's 'error' event as fatal and the whole server exits; with it the bad connection is discarded and replaced.
   pool.on("error", (e) => { console.error(`[db] idle connection error (connection discarded): ${e.message}`); });

@@ -8,6 +8,7 @@ import { audit } from "../audit";
 import { config } from "../config";
 import { requirePermission, tagAuth } from "../auth";
 import { getFile } from "../storage";
+import { sendStored } from "../serve";
 import { PrintError, claimNext, reportResult, transition } from "../printService";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -113,8 +114,8 @@ export async function agentRoutes(app: FastifyInstance, pool: Pool) {
     if (!j || j.status !== "printing") return reply.code(404).send({ error: "not_found" });
     const c = (await pool.query("SELECT storage_key,mime,sha256 FROM final_compositions WHERE id=$1 AND deleted_at IS NULL", [j.composition_id])).rows[0];
     if (!c) return reply.code(404).send({ error: "not_found" });
-    reply.header("X-Content-Sha256", c.sha256);
-    return reply.type(c.mime).send(await getFile(c.storage_key));
+    reply.header("X-Content-Sha256", c.sha256);          // (the job description carries the checksum too; the agent verifies what it received)
+    return sendStored(reply, c.storage_key, { mime: c.mime });
   });
 
   // Tells the server the printer is still working on a long job, so it is not put back in the queue.

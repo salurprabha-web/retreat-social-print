@@ -11,6 +11,7 @@ import { S3Backend, DiskBackend } from "../src/storageBackends";
 import { FakeS3 } from "./helpers/fakeS3";
 
 // This suite always runs on the S3 backend (in-memory stand-in), whatever TEST_STORAGE says: the direct upload exists only there.
+(globalThis as any).__rspNoFollow = true;   // these suites look at the redirects themselves
 const fake = new FakeS3();
 const signer = new S3Client({ region: "auto", endpoint: "https://acct.r2.cloudflarestorage.com", credentials: { accessKeyId: "AKIATEST", secretAccessKey: "secret" } });
 (globalThis as any).__rspStorageFactory = () => new S3Backend(fake, "bkt", "", signer);

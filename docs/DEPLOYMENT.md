@@ -1,4 +1,6 @@
-# Deployment
+# Deployment (Docker, on a server of your own)
+
+> Prefer no server at all? `docs/VERCEL.md` describes hosting on Vercel + Neon + Cloudflare R2 (the `vercel` branch).
 
 One Docker Compose stack: `db` (PostgreSQL 16), `api`, `web` (Next.js standalone), `proxy` (Caddy, automatic HTTPS). Only the proxy publishes ports (80/443). The database, API and web containers are reachable only on the internal network. The API and web containers run read-only with all capabilities dropped; the API writes only to the `storage` volume.
 

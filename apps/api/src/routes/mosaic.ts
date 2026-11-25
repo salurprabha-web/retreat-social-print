@@ -10,6 +10,7 @@ import { requirePermission } from "../auth";
 import { config } from "../config";
 import { copyFile, deleteFile, getFile, presignPut, putFile, sniffImage, statFile } from "../storage";
 import { signUploadTicket, verifyUploadTicket } from "../signing";
+import { sendStored } from "../serve";
 import { clearTiles, currentVersion, ensureProject, renderCurrent, setGrid, syncMosaic, type Project } from "../mosaicService";
 
 const TOKEN = /^[0-9a-f]{24}$/;
@@ -143,7 +144,8 @@ export async function mosaicRoutes(app: FastifyInstance, pool: Pool) {
     if (!out) return reply.code(404).send({ error: "no_master" });
     reply.header("Cache-Control", opts.cache);
     reply.header("X-Mosaic-Version", out.version);
-    if (opts.filename) reply.header("Content-Disposition", `attachment; filename="${opts.filename}"`);
+    // The finished file can be very large (up to the pixel budget): the rendering is kept in storage, so on object storage it is downloaded from there.
+    if (opts.filename) return sendStored(reply, out.key, { mime: "image/jpeg", filename: opts.filename });
     return reply.type("image/jpeg").send(out.buffer);
   }
 

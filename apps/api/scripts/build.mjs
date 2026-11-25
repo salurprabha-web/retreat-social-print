@@ -11,7 +11,7 @@ const external = [...Object.keys(pkg.dependencies ?? {}).filter((d) => d !== "@r
 
 fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
 await build({
-  entryPoints: [path.join(root, "src/index.ts"), path.join(root, "src/migrate-cli.ts"), path.join(root, "src/seed-admin.ts"), path.join(root, "src/openapi-cli.ts")],
+  entryPoints: [path.join(root, "src/index.ts"), path.join(root, "src/serverless.ts"), path.join(root, "src/migrate-cli.ts"), path.join(root, "src/seed-admin.ts"), path.join(root, "src/openapi-cli.ts")],
   outdir: path.join(root, "dist"), bundle: true, platform: "node", target: "node22", format: "esm", splitting: true, sourcemap: true, external, logLevel: "info",
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },     // some bundled CommonJS code expects require()
 });

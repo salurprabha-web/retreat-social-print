@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @rsp/api build && if [ -n \"$DATABASE_URL_DIRECT\" ]; then DATABASE_URL=\"$DATABASE_URL_DIRECT\" node apps/api/dist/migrate-cli.js; fi && pnpm --filter @rsp/web build",
+  "crons": [
+    { "path": "/api/v1/cron/print-requeue", "schedule": "* * * * *" },
+    { "path": "/api/v1/cron/retention", "schedule": "0 * * * *" },
+    { "path": "/api/v1/cron/maintenance", "schedule": "30 * * * *" }
+  ]
+}

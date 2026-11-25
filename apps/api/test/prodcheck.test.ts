@@ -44,4 +44,33 @@ describe("trust proxy setting", () => {
     expect(parseTrustProxy(undefined)).toBe(true); expect(parseTrustProxy("true")).toBe(true); expect(parseTrustProxy("false")).toBe(false); expect(parseTrustProxy("0")).toBe(false);
     expect(parseTrustProxy("2")).toBe(2); expect(parseTrustProxy("10.0.0.0/8, 172.16.0.1")).toEqual(["10.0.0.0/8", "172.16.0.1"]);
   });
+
+  describe("object storage and Vercel", () => {
+    const s3env = { ...good, STORAGE_DIR: undefined, STORAGE_BACKEND: "s3", S3_BUCKET: "photos", S3_ACCESS_KEY_ID: "AKIAEXAMPLE", S3_SECRET_ACCESS_KEY: "s3cr3t-value-xyz", S3_ENDPOINT: "https://acct.r2.cloudflarestorage.com" };
+    const vercel = { ...s3env, VERCEL: "1", RATE_LIMIT_STORE: "pg", CRON_SECRET: "c".repeat(40), TRUST_PROXY: "1" };
+    it("accepts a complete object-storage configuration (no STORAGE_DIR needed)", () => {
+      expect(checkProductionEnv(s3env)).toEqual({ errors: [], warnings: [] });
+    });
+    it("object storage needs a bucket, keys and an https address", () => {
+      expect(checkProductionEnv({ ...s3env, S3_BUCKET: undefined }).errors.join()).toMatch(/S3_BUCKET/);
+      expect(checkProductionEnv({ ...s3env, S3_ACCESS_KEY_ID: undefined }).errors.join()).toMatch(/S3_ACCESS_KEY_ID/);
+      expect(checkProductionEnv({ ...s3env, S3_SECRET_ACCESS_KEY: "" }).errors.join()).toMatch(/S3_SECRET_ACCESS_KEY/);
+      expect(checkProductionEnv({ ...s3env, S3_ENDPOINT: "http://storage.example.com" }).errors.join()).toMatch(/https/);
+      expect(checkProductionEnv({ ...s3env, S3_ENDPOINT: "http://localhost:9000" }).errors).toEqual([]);      // local test servers are fine
+    });
+    it("accepts a complete Vercel configuration", () => {
+      expect(checkProductionEnv(vercel).errors).toEqual([]);
+    });
+    it("on Vercel it refuses local-disk storage, in-memory rate limits, a missing or short cron secret and offline mode", () => {
+      expect(checkProductionEnv({ ...vercel, STORAGE_BACKEND: undefined, STORAGE_DIR: "/tmp/x" }).errors.join()).toMatch(/no persistent disk/);
+      expect(checkProductionEnv({ ...vercel, RATE_LIMIT_STORE: undefined }).errors.join()).toMatch(/RATE_LIMIT_STORE=pg/);
+      expect(checkProductionEnv({ ...vercel, RATE_LIMIT_STORE: "memory" }).errors.join()).toMatch(/RATE_LIMIT_STORE=pg/);
+      expect(checkProductionEnv({ ...vercel, CRON_SECRET: undefined }).errors.join()).toMatch(/CRON_SECRET/);
+      expect(checkProductionEnv({ ...vercel, CRON_SECRET: "short" }).errors.join()).toMatch(/CRON_SECRET/);
+      expect(checkProductionEnv({ ...vercel, RSP_MODE: "local" }).errors.join()).toMatch(/offline venue server/);
+    });
+    it("the same settings are fine on a server of your own (the Vercel rules only apply on Vercel)", () => {
+      expect(checkProductionEnv({ ...good, RATE_LIMIT_STORE: undefined, CRON_SECRET: undefined }).errors).toEqual([]);
+    });
+  });
 });

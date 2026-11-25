@@ -89,6 +89,15 @@ describe("S3 backend specifics", () => {
     expect(f.calls.filter((c) => c === "DeleteObjectsCommand").length).toBe(3);
   });
 
+  it("when the store refuses the batch delete, every object is still deleted one by one", async () => {
+    const f = new FakeS3(1000); f.refuseBatchDelete = true; const b = new S3Backend(f, "bkt", "", signer);
+    for (let i = 0; i < 60; i++) f.objects.set(`events/x/o${i}.jpg`, { body: Buffer.from("x") });
+    f.objects.set("events/xy/keep.jpg", { body: Buffer.from("k") });
+    await b.deletePrefix("events/x");
+    expect([...f.objects.keys()]).toEqual(["events/xy/keep.jpg"]);
+    expect(f.calls.filter((c) => c === "DeleteObjectCommand").length).toBeGreaterThanOrEqual(60);
+  });
+
   it("sets a content type from the extension", async () => {
     const f = new FakeS3(); const b = new S3Backend(f, "bkt", "", signer);
     await b.put("events/e/a.jpg", Buffer.from("x")); await b.put("events/e/b.svg", Buffer.from("x")); await b.put("events/e/c.bin", Buffer.from("x"));

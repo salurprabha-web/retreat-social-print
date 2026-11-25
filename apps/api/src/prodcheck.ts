@@ -29,8 +29,22 @@ export function checkProductionEnv(env: Record<string, string | undefined>): Env
     if (env.CLOUD_URL && !env.SYNC_TOKENS) warnings.push("CLOUD_URL is set but SYNC_TOKENS is empty: nothing will be delivered to the cloud.");
     if (!env.CLOUD_URL && env.SYNC_TOKENS) warnings.push("SYNC_TOKENS is set but CLOUD_URL is empty: nothing will be delivered to the cloud.");
   }
-  if (!env.STORAGE_DIR) warnings.push("STORAGE_DIR is not set: photos are stored in ./storage relative to the working directory. Set an absolute path on a persistent, backed-up volume.");
-  else if (!/^([A-Za-z]:[\\/]|\/)/.test(env.STORAGE_DIR)) warnings.push("STORAGE_DIR is a relative path. Use an absolute path so it does not depend on where the server is started.");
+  const s3 = env.STORAGE_BACKEND === "s3";
+  if (s3) {
+    if (!env.S3_BUCKET) errors.push("STORAGE_BACKEND=s3 needs S3_BUCKET.");
+    if (!env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY) errors.push("STORAGE_BACKEND=s3 needs S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY.");
+    if (env.S3_ENDPOINT && !/^https:\/\//i.test(env.S3_ENDPOINT) && !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(env.S3_ENDPOINT)) errors.push("S3_ENDPOINT must be an https:// address (the storage credentials and every photo travel over it).");
+  }
+  // A host that runs the API as short-lived functions (Vercel) has no disk to keep, no memory shared between requests and no timers.
+  // Each of these would otherwise fail silently, so they are refused at start.
+  if (env.VERCEL) {
+    if (!s3) errors.push("On Vercel there is no persistent disk: set STORAGE_BACKEND=s3 (Cloudflare R2 or another S3-compatible bucket).");
+    if (env.RATE_LIMIT_STORE !== "pg") errors.push("On Vercel set RATE_LIMIT_STORE=pg: counters kept in memory are per function instance and would not limit anything.");
+    if ((env.CRON_SECRET ?? "").length < 32) errors.push("On Vercel set CRON_SECRET (32+ random characters): the scheduled jobs (automatic data deletion, print requeue) are switched off without it.");
+    if (env.RSP_MODE === "local") errors.push("RSP_MODE=local (an offline venue server) must not run on Vercel.");
+  }
+  if (!s3 && !env.STORAGE_DIR) warnings.push("STORAGE_DIR is not set: photos are stored in ./storage relative to the working directory. Set an absolute path on a persistent, backed-up volume.");
+  else if (!s3 && env.STORAGE_DIR && !/^([A-Za-z]:[\\/]|\/)/.test(env.STORAGE_DIR)) warnings.push("STORAGE_DIR is a relative path. Use an absolute path so it does not depend on where the server is started.");
   const tp = (env.TRUST_PROXY ?? "").toLowerCase();
   if (!tp) warnings.push("TRUST_PROXY is not set (default: trust the first proxy). The API must only be reachable through your reverse proxy, otherwise clients can fake their address and dodge rate limits.");
   return { errors, warnings };
