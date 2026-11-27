@@ -39,10 +39,6 @@ export default {
   transpilePackages: ["@rsp/shared"],
   // The API is loaded as it was built (apps/api/dist) and its native libraries stay native; Next copies what they need into the function.
   serverExternalPackages: ["@rsp/api", "sharp", "@napi-rs/canvas", "@node-rs/argon2", "pdfkit", "archiver", "pg", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
-  // Files the API reads by name at run time (so a static trace cannot see them): the fonts the picture engine draws with.
-  outputFileTracingIncludes: {
-    "/api/**": ["../api/node_modules/@fontsource/*/files/*.woff"],
-  },
   compress: false,   // gzip would buffer the live (SSE) print stream; compression belongs to the reverse proxy
   async headers() { return [{ source: "/:path*", headers: securityHeaders }]; },
   async rewrites() {

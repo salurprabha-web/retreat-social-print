@@ -13,8 +13,23 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const BUNDLED = new Set(["@rsp/shared", "fastify", "@fastify/cookie", "@fastify/rate-limit"]);
 const external = [...Object.keys(pkg.dependencies ?? {}).filter((d) => !BUNDLED.has(d)), "node:*"];
 
+// The font files the picture engine registers (see fontFiles() in src/fonts.ts: regular/bold, upright/italic Latin, and Devanagari),
+// embedded into the code as base64. A host that packages only the files it sees being used (Vercel) would otherwise miss them.
+const { createRequire } = await import("node:module");
+const reqFrom = createRequire(path.join(root, "package.json"));
+const fonts = {};
+for (const dep of Object.keys(pkg.dependencies ?? {}).filter((d) => d.startsWith("@fontsource/"))) {
+  const name = dep.split("/")[1];
+  const dir = path.join(path.dirname(reqFrom.resolve(`${dep}/package.json`)), "files");
+  for (const f of fs.readdirSync(dir)) {
+    if (/^.+-latin-(400|700)-(normal|italic)\.woff$/.test(f) || /^noto-sans-devanagari-devanagari-(400|700)-normal\.woff$/.test(f)) fonts[`${name}/${f}`] = fs.readFileSync(path.join(dir, f)).toString("base64");
+  }
+}
+console.log(`embedding ${Object.keys(fonts).length} font files (${Math.round(Object.values(fonts).reduce((n, s) => n + s.length, 0) / 1024)} KB as text)`);
+
 fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
 await build({
+  define: { __RSP_EMBEDDED_FONTS__: JSON.stringify(fonts) },
   entryPoints: [path.join(root, "src/index.ts"), path.join(root, "src/serverless.ts"), path.join(root, "src/migrate-cli.ts"), path.join(root, "src/seed-admin.ts"), path.join(root, "src/openapi-cli.ts")],
   outdir: path.join(root, "dist"), bundle: true, platform: "node", target: "node22", format: "esm", splitting: true, sourcemap: true, external, logLevel: "info",
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },     // some bundled CommonJS code expects require()
